@@ -295,7 +295,7 @@ CApplication::CApplication(void)
   , m_progressTrackingItem(new CFileItem)
   , m_videoInfoScanner(new CVideoInfoScanner)
   , m_musicInfoScanner(new CMusicInfoScanner)
-  , m_seekHandler(new CSeekHandler)
+  , m_seekHandler(&CSeekHandler::Get())
   , m_playerController(new CPlayerController)
 {
   m_network = NULL;
@@ -364,7 +364,6 @@ CApplication::~CApplication(void)
 #endif
 
   delete m_dpms;
-  delete m_seekHandler;
   delete m_playerController;
   delete m_pInertialScrollingHandler;
   delete m_pPlayer;
@@ -390,7 +389,7 @@ bool CApplication::OnEvent(XBMC_Event& newEvent)
     case XBMC_MOUSEBUTTONUP:
     case XBMC_MOUSEMOTION:
       g_Mouse.HandleEvent(newEvent);
-      CInputManager::GetInstance().ProcessMouse(g_application.GetActiveWindowID());
+      CInputManager::GetInstance().ProcessMouse(g_windowManager.GetActiveWindowID());
       break;
     case XBMC_VIDEORESIZE:
       if (!g_application.m_bInitializing &&
@@ -434,7 +433,7 @@ bool CApplication::OnEvent(XBMC_Event& newEvent)
         actionId = newEvent.touch.action;
       else
       {
-        int iWin = g_application.GetActiveWindowID();
+        int iWin = g_windowManager.GetActiveWindowID();
         CButtonTranslator::GetInstance().TranslateTouchAction(iWin, newEvent.touch.action, newEvent.touch.pointers, actionId);
       }
 
@@ -615,8 +614,8 @@ bool CApplication::Create()
 #endif // !USE_STATIC_FFMPEG
   if (!strstr(FFMPEG_VERSION, FFMPEG_VER_SHA))
   {
-    if (strstr(FFMPEG_VERSION, "xbmc"))
-      CLog::Log(LOGNOTICE, "WARNING: unknown ffmpeg-xbmc version detected");
+    if (strstr(FFMPEG_VERSION, "kodi"))
+      CLog::Log(LOGNOTICE, "WARNING: unknown ffmpeg-kodi version detected");
     else
       CLog::Log(LOGNOTICE, "WARNING: unsupported ffmpeg version detected");
   }
@@ -2140,7 +2139,7 @@ bool CApplication::OnKey(const CKey& key)
   g_Mouse.SetActive(false);
 
   // get the current active window
-  int iWin = GetActiveWindowID();
+  int iWin = g_windowManager.GetActiveWindowID();
 
   // this will be checked for certain keycodes that need
   // special handling if the screensaver is active
@@ -2666,7 +2665,7 @@ bool CApplication::OnAction(const CAction &action)
   if (m_pPlayer->IsPlaying() && action.GetAmount() && (action.GetID() == ACTION_ANALOG_SEEK_FORWARD || action.GetID() == ACTION_ANALOG_SEEK_BACK))
   {
     if (!m_pPlayer->CanSeek()) return false;
-    m_seekHandler->Seek(action.GetID() == ACTION_ANALOG_SEEK_FORWARD, action.GetAmount(), action.GetRepeat());
+    m_seekHandler->Seek(action.GetID() == ACTION_ANALOG_SEEK_FORWARD, action.GetAmount(), action.GetRepeat(), true);
     return true;
   }
   if (action.GetID() == ACTION_GUIPROFILE_BEGIN)
@@ -2721,9 +2720,9 @@ void CApplication::FrameMove(bool processEvents, bool processGUI)
 #endif
 
     // process input actions
-    CInputManager::GetInstance().ProcessRemote(GetActiveWindowID());
-    CInputManager::GetInstance().ProcessGamepad(GetActiveWindowID());
-    CInputManager::GetInstance().ProcessEventServer(GetActiveWindowID(), frameTime);
+    CInputManager::GetInstance().ProcessRemote(g_windowManager.GetActiveWindowID());
+    CInputManager::GetInstance().ProcessGamepad(g_windowManager.GetActiveWindowID());
+    CInputManager::GetInstance().ProcessEventServer(g_windowManager.GetActiveWindowID(), frameTime);
     CInputManager::GetInstance().ProcessPeripherals(frameTime);
     if (processGUI && m_renderGUI)
     {
@@ -2759,32 +2758,7 @@ bool CApplication::ExecuteInputAction(const CAction &action)
   return bResult;
 }
 
-int CApplication::GetActiveWindowID(void)
-{
-  // Get the currently active window
-  int iWin = g_windowManager.GetActiveWindow() & WINDOW_ID_MASK;
 
-  // If there is a dialog active get the dialog id instead
-  if (g_windowManager.HasModalDialog())
-    iWin = g_windowManager.GetTopMostModalDialogID() & WINDOW_ID_MASK;
-
-  // If the window is FullScreenVideo check for special cases
-  if (iWin == WINDOW_FULLSCREEN_VIDEO)
-  {
-    // check if we're in a DVD menu
-    if(g_application.m_pPlayer->IsInMenu())
-      iWin = WINDOW_VIDEO_MENU;
-    // check for LiveTV and switch to it's virtual window
-    else if (g_PVRManager.IsStarted() && g_application.CurrentFileItem().HasPVRChannelInfoTag())
-      iWin = WINDOW_FULLSCREEN_LIVETV;
-  }
-  // special casing for PVR radio
-  if (iWin == WINDOW_VISUALISATION && g_PVRManager.IsStarted() && g_application.CurrentFileItem().HasPVRChannelInfoTag())
-    iWin = WINDOW_FULLSCREEN_RADIO;
-
-  // Return the window id
-  return iWin;
-}
 
 bool CApplication::Cleanup()
 {
