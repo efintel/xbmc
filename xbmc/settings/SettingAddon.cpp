@@ -25,6 +25,8 @@
 #include "utils/XBMCTinyXML.h"
 #include "utils/XMLUtils.h"
 
+#define XML_ELM_DEFAULT     "default"
+
 CSettingAddon::CSettingAddon(const std::string &id, CSettingsManager *settingsManager /* = NULL */)
   : CSettingString(id, settingsManager),
     m_addonType(ADDON::ADDON_UNKNOWN)

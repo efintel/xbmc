@@ -46,7 +46,7 @@
 #endif
 
 #include "../WinEventsX11.h"
-#include "input/InputManager.h"
+#include "input/MouseStat.h"
 
 using namespace std;
 
@@ -506,36 +506,17 @@ bool CWinSystemX11::IsCurrentOutput(std::string output)
 #if defined(HAS_EGL)
 EGLConfig getEGLConfig(EGLDisplay eglDisplay, XVisualInfo *vInfo)
 {
-  EGLint attributes[] =
-  {
-    EGL_DEPTH_SIZE, 24,
+  EGLint attributes[] = {
     EGL_NONE
   };
   EGLint numConfigs;
-
-  if (!eglChooseConfig(eglDisplay, attributes, NULL, 0, &numConfigs))
-  {
-    CLog::Log(LOGERROR, "Failed to query number of egl configs");
-    return EGL_NO_CONFIG;
-  }
-  if (numConfigs == 0)
-  {
-    CLog::Log(LOGERROR, "No suitable egl configs found");
-    return EGL_NO_CONFIG;
-  }
-
-  EGLConfig *eglConfigs;
-  eglConfigs = (EGLConfig*)malloc(numConfigs * sizeof(EGLConfig));
-  if (!eglConfigs)
-  {
-    CLog::Log(LOGERROR, "eglConfigs malloc failed");
-    return EGL_NO_CONFIG;
-  }
+  // TODO make dynamic
+  EGLConfig eglConfigs[1024];
   EGLConfig eglConfig = EGL_NO_CONFIG;
-  if (!eglChooseConfig(eglDisplay, attributes, eglConfigs, numConfigs, &numConfigs))
+  if (!eglChooseConfig(eglDisplay, attributes, eglConfigs, 1024, &numConfigs))
   {
     CLog::Log(LOGERROR, "Failed to query egl configs");
-    goto Exit;
+    return EGL_NO_CONFIG;
   }
   for (EGLint i = 0;i < numConfigs;++i)
   {
@@ -551,8 +532,6 @@ EGLConfig getEGLConfig(EGLDisplay eglDisplay, XVisualInfo *vInfo)
     }
   }
 
-Exit:
-  free(eglConfigs);
   return eglConfig;
 }
 
@@ -741,8 +720,7 @@ bool CWinSystemX11::RefreshGlxContext(bool force)
       }
     }
 
-    EGLint contextAttributes[] =
-    {
+    GLint contextAttributes[] = {
       EGL_CONTEXT_CLIENT_VERSION, 2,
       EGL_NONE
     };
@@ -993,7 +971,7 @@ bool CWinSystemX11::SetWindow(int width, int height, bool fullscreen, const std:
 
   if (!m_mainWindow)
   {
-    CInputManager::Get().SetMouseActive(false);
+    g_Mouse.SetActive(false);
   }
 
   if (m_mainWindow && ((m_bFullScreen != fullscreen) || m_currentOutput.compare(output) != 0 || m_windowDirty))
@@ -1023,7 +1001,7 @@ bool CWinSystemX11::SetWindow(int width, int height, bool fullscreen, const std:
       }
     }
 
-    CInputManager::Get().SetMouseActive(false);
+    g_Mouse.SetActive(false);
     OnLostDevice();
     DestroyWindow();
     m_windowDirty = true;
@@ -1048,7 +1026,7 @@ bool CWinSystemX11::SetWindow(int width, int height, bool fullscreen, const std:
     };
 #endif
 #if defined(HAS_EGL)
-    EGLint att[] =
+    GLint att[] =
     {
       EGL_RED_SIZE, 8,
       EGL_GREEN_SIZE, 8,
@@ -1102,27 +1080,17 @@ bool CWinSystemX11::SetWindow(int width, int height, bool fullscreen, const std:
       CLog::Log(LOGERROR, "Failed to choose a config %d\n", eglGetError());
     }
 
-    EGLint eglVisualid;
-    if (!eglGetConfigAttrib(m_eglDisplay, eglConfig, EGL_NATIVE_VISUAL_ID, &eglVisualid))
-    {
+    XVisualInfo x11_visual_info_template;
+    if (!eglGetConfigAttrib(m_eglDisplay, eglConfig, EGL_NATIVE_VISUAL_ID, (EGLint*)&x11_visual_info_template.visualid)) {
       CLog::Log(LOGERROR, "Failed to query native visual id\n");
     }
-    XVisualInfo x11_visual_info_template;
-    x11_visual_info_template.visualid = eglVisualid;
     int num_visuals;
     vi = XGetVisualInfo(m_dpy,
                         VisualIDMask,
-                        &x11_visual_info_template,
-                        &num_visuals);
+			&x11_visual_info_template,
+			&num_visuals);
 
 #endif
-
-    if(!vi)
-    {
-      CLog::Log(LOGERROR, "Failed to find matching visual");
-      return false;
-    }
-
     cmap = XCreateColormap(m_dpy, RootWindow(m_dpy, vi->screen), vi->visual, AllocNone);
 
     bool hasWM = HasWindowManager();
@@ -1157,10 +1125,6 @@ bool CWinSystemX11::SetWindow(int width, int height, bool fullscreen, const std:
     {
       Atom fs = XInternAtom(m_dpy, "_NET_WM_STATE_FULLSCREEN", True);
       XChangeProperty(m_dpy, m_mainWindow, XInternAtom(m_dpy, "_NET_WM_STATE", True), XA_ATOM, 32, PropModeReplace, (unsigned char *) &fs, 1);
-      // disable desktop compositing for KDE, when Kodi is in full-screen mode
-      int one = 1;
-      XChangeProperty(m_dpy, m_mainWindow, XInternAtom(m_dpy, "_KDE_NET_WM_BLOCK_COMPOSITING", True), XA_CARDINAL, 32,
-                      PropModeReplace, (unsigned char*) &one,  1);
     }
 
     // define invisible cursor

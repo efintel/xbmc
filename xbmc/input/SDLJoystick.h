@@ -22,9 +22,8 @@
 #define SDL_JOYSTICK_H
 
 #include "system.h" // for HAS_SDL_JOYSTICK
+#include "settings/lib/ISettingCallback.h"
 #include <vector>
-#include <list>
-#include <utility>
 #include <string>
 #include <map>
 #include <memory>
@@ -68,10 +67,12 @@ class CRegExp;
 // Class to manage all connected joysticks
 // Note: 'index' always refers to indices specific to this class,
 //       whereas 'ids' always refer to SDL instance id's
-class CJoystick
+class CJoystick : public ISettingCallback
 {
 public:
   CJoystick();
+
+  virtual void OnSettingChanged(const CSetting *setting);
 
   void Initialize();
   void Reset();
@@ -80,7 +81,6 @@ public:
   bool GetAxis(std::string &joyName, int &id) const;
   bool GetButton(std::string &joyName, int &id, bool consider_repeat = true);
   bool GetHat(std::string &joyName, int &id, int &position, bool consider_repeat = true);
-  bool GetAxes(std::list<std::pair<std::string, int> >& axes, bool consider_still = false);
   float GetAmount(std::string &joyName, int axisNum) const;
   bool IsEnabled() const { return m_joystickEnabled; }
   void SetEnabled(bool enabled = true);

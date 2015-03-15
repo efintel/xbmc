@@ -75,6 +75,7 @@ class DPMSSupport;
 class CSplash;
 class CBookmark;
 class CNetwork;
+class CInputManager;
 
 namespace VIDEO
 {
@@ -116,6 +117,7 @@ class CApplication : public CXBApplicationEx, public IPlayerCallback, public IMs
                      public ISettingCallback, public ISettingsHandler, public ISubSettings
 {
   friend class CApplicationPlayer;
+  friend class CInputManager;
 public:
 
   enum ESERVERS
@@ -179,7 +181,7 @@ public:
   PlayBackRet PlayFile(const CFileItem& item, bool bRestart = false);
   void SaveFileState(bool bForeground = false);
   void UpdateFileState();
-  void LoadVideoSettings(const CFileItem& item);
+  void LoadVideoSettings(const std::string &path);
   void StopPlaying();
   void Restart(bool bSamePosition = true);
   void DelayedPlayerRestart();
@@ -187,6 +189,7 @@ public:
   bool IsPlayingFullScreenVideo() const;
   bool IsStartingPlayback() const { return m_bPlaybackStarting; }
   bool IsFullScreen();
+  bool OnKey(const CKey& key);
   bool OnAppCommand(const CAction &action);
   bool OnAction(const CAction &action);
   void CheckShutdown();
@@ -372,7 +375,6 @@ public:
   bool GetRenderGUI() const { return m_renderGUI; };
 
   bool SetLanguage(const std::string &strLanguage);
-  bool LoadLanguage(bool reload, bool& fallback);
 
   ReplayGainSettings& GetReplayGainSettings() { return m_replayGainSettings; }
 
@@ -482,9 +484,11 @@ protected:
   void VolumeChanged() const;
 
   PlayBackRet PlayStack(const CFileItem& item, bool bRestart);
-  int  GetActiveWindowID(void);
+  bool ExecuteInputAction(const CAction &action);
+  
 
   float NavigationIdleTime();
+  static bool AlwaysProcess(const CAction& action);
 
   bool InitDirectoriesLinux();
   bool InitDirectoriesOSX();

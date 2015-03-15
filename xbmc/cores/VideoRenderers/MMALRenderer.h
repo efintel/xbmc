@@ -20,6 +20,8 @@
  *
  */
 
+#ifdef HAS_MMAL
+
 #include "guilib/GraphicContext.h"
 #include "RenderFlags.h"
 #include "RenderFormats.h"
@@ -116,9 +118,11 @@ protected:
 
   MMAL_QUEUE_T     *m_release_queue;
   CEvent            m_sync;
-  MMAL_BUFFER_HEADER_T m_quit_packet;
-
   bool init_vout(MMAL_ES_FORMAT_T *m_format);
   void ReleaseBuffers();
   void UnInitMMAL();
 };
+
+#else
+#include "LinuxRenderer.h"
+#endif

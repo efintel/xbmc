@@ -24,21 +24,6 @@
 
 class CFileItemList;
 
-enum SelectFirstUnwatchedItem
-{
-  NEVER = 0,
-  ON_FIRST_ENTRY = 1,
-  ALWAYS = 2
-};
-
-enum IncludeAllSeasonsAndSpecials
-{
-  NEITHER = 0,
-  BOTH = 1,
-  ALL_SEASONS = 2,
-  SPECIALS = 3
-};
-
 class CGUIWindowVideoNav : public CGUIWindowVideoBase
 {
 public:
@@ -70,9 +55,7 @@ protected:
   virtual bool GetFilteredItems(const std::string &filter, CFileItemList &items);
 
   virtual void OnItemLoaded(CFileItem* pItem) {};
-
   // override base class methods
-  virtual bool Update(const std::string &strDirectory, bool updateFilterPath = true);
   virtual bool GetDirectory(const std::string &strDirectory, CFileItemList &items);
   virtual void UpdateButtons();
   virtual void DoSearch(const std::string& strSearch, CFileItemList& items);
@@ -83,10 +66,7 @@ protected:
   virtual bool OnClick(int iItem);
   virtual std::string GetStartFolder(const std::string &dir);
 
-  VECSOURCES m_shares;
+  virtual std::string GetQuickpathName(const std::string& strPath) const;
 
-private:
-  virtual SelectFirstUnwatchedItem GetSettingSelectFirstUnwatchedItem();
-  virtual IncludeAllSeasonsAndSpecials GetSettingIncludeAllSeasonsAndSpecials();
-  virtual int GetFirstUnwatchedItemIndex(bool includeAllSeasons, bool includeSpecials);
+  VECSOURCES m_shares;
 };

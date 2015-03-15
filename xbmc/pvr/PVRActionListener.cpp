@@ -22,7 +22,7 @@
 
 #include "Application.h"
 #include "ApplicationMessenger.h"
-#include "input/Key.h"
+#include "guilib/Key.h"
 #include "guilib/GUIWindow.h"
 #include "guilib/LocalizeStrings.h"
 #include "guilib/GUIWindowManager.h"
@@ -92,8 +92,8 @@ bool CPVRActionListener::OnAction(const CAction &action)
         if(g_PVRManager.IsPlaying())
         {
           // pvr client addon
-          CPVRChannelPtr playingChannel(g_PVRManager.GetCurrentChannel());
-          if(!playingChannel)
+          CPVRChannelPtr playingChannel;
+          if(!g_PVRManager.GetCurrentChannel(playingChannel))
             return false;
           
           if (action.GetID() == REMOTE_0)
@@ -131,7 +131,7 @@ bool CPVRActionListener::OnAction(const CAction &action)
         }
         else
         {
-          // filesystem provider like slingbox etc
+          // filesystem provider like slingbox, cmyth, etc
           int iChannelNumber = -1;
           std::string strChannel = StringUtils::Format("%i", action.GetID() - REMOTE_0);
           if (CGUIDialogNumeric::ShowAndGetNumber(strChannel, g_localizeStrings.Get(19000)))

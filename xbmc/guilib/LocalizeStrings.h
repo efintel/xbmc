@@ -46,8 +46,7 @@ struct LocStr
 };
 
 // The default fallback language is fixed to be English
-const std::string CORE_LANGUAGE_DEFAULT = "resource.language.en_gb";
-const std::string ADDON_LANGUAGE_DEFAULT = "English";
+const std::string SOURCE_LANGUAGE = "English";
 
 class CLocalizeStrings
 {
@@ -59,7 +58,6 @@ public:
   void ClearSkinStrings();
   const std::string& Get(uint32_t code) const;
   void Clear();
-
 protected:
   void Clear(uint32_t start, uint32_t end);
 

@@ -19,7 +19,7 @@
  */
 
 #include "GUISpinControl.h"
-#include "input/Key.h"
+#include "Key.h"
 #include "utils/StringUtils.h"
 #include <stdio.h>
 

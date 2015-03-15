@@ -18,14 +18,13 @@
  *
  */
 
-#include <errno.h>
 #include <vector>
 
 #include "ScriptInvocationManager.h"
+#include "ILanguageInvocationHandler.h"
+#include "ILanguageInvoker.h"
+#include "LanguageInvokerThread.h"
 #include "filesystem/File.h"
-#include "interfaces/generic/ILanguageInvocationHandler.h"
-#include "interfaces/generic/ILanguageInvoker.h"
-#include "interfaces/generic/LanguageInvokerThread.h"
 #include "threads/SingleLock.h"
 #include "utils/StringUtils.h"
 #include "utils/URIUtils.h"
@@ -185,7 +184,7 @@ bool CScriptInvocationManager::HasLanguageInvoker(const std::string &script) con
   return it != m_invocationHandlers.end() && it->second != NULL;
 }
 
-LanguageInvokerPtr CScriptInvocationManager::GetLanguageInvoker(const std::string &script) const
+ILanguageInvoker* CScriptInvocationManager::GetLanguageInvoker(const std::string &script) const
 {
   std::string extension = URIUtils::GetExtension(script);
   StringUtils::ToLower(extension);
@@ -193,26 +192,21 @@ LanguageInvokerPtr CScriptInvocationManager::GetLanguageInvoker(const std::strin
   CSingleLock lock(m_critSection);
   map<string, ILanguageInvocationHandler*>::const_iterator it = m_invocationHandlers.find(extension);
   if (it != m_invocationHandlers.end() && it->second != NULL)
-    return LanguageInvokerPtr(it->second->CreateInvoker());
+    return it->second->CreateInvoker();
 
-  return LanguageInvokerPtr();
+  return NULL;
 }
 
-int CScriptInvocationManager::ExecuteAsync(const std::string &script, const ADDON::AddonPtr &addon /* = ADDON::AddonPtr() */, const std::vector<std::string> &arguments /* = std::vector<std::string>() */)
+int CScriptInvocationManager::Execute(const std::string &script, const ADDON::AddonPtr &addon /* = ADDON::AddonPtr() */, const std::vector<std::string> &arguments /* = std::vector<std::string>() */)
 {
   if (script.empty() || !CFile::Exists(script, false))
     return -1;
 
-  LanguageInvokerPtr invoker = GetLanguageInvoker(script);
-  return ExecuteAsync(script, invoker, addon, arguments);
-}
-
-int CScriptInvocationManager::ExecuteAsync(const std::string &script, LanguageInvokerPtr languageInvoker, const ADDON::AddonPtr &addon /* = ADDON::AddonPtr() */, const std::vector<std::string> &arguments /* = std::vector<std::string>() */)
-{
-  if (script.empty() || languageInvoker == NULL || !CFile::Exists(script, false))
+  ILanguageInvoker *invoker = GetLanguageInvoker(script);
+  if (invoker == NULL)
     return -1;
 
-  CLanguageInvokerThreadPtr invokerThread = CLanguageInvokerThreadPtr(new CLanguageInvokerThread(languageInvoker, this));
+  CLanguageInvokerThreadPtr invokerThread = CLanguageInvokerThreadPtr(new CLanguageInvokerThread(invoker, this));
   if (invokerThread == NULL)
     return -1;
 
@@ -229,43 +223,6 @@ int CScriptInvocationManager::ExecuteAsync(const std::string &script, LanguageIn
   invokerThread->Execute(script, arguments);
 
   return invokerThread->GetId();
-}
-
-int CScriptInvocationManager::ExecuteSync(const std::string &script, const ADDON::AddonPtr &addon /* = ADDON::AddonPtr() */, const std::vector<std::string> &arguments /* = std::vector<std::string>() */, uint32_t timeoutMs /* = 0 */, bool waitShutdown /* = false */)
-{
-  if (script.empty() || !CFile::Exists(script, false))
-    return -1;
-
-  LanguageInvokerPtr invoker = GetLanguageInvoker(script);
-  return ExecuteSync(script, invoker, addon, arguments, timeoutMs, waitShutdown);
-}
-
-int CScriptInvocationManager::ExecuteSync(const std::string &script, LanguageInvokerPtr languageInvoker, const ADDON::AddonPtr &addon /* = ADDON::AddonPtr() */, const std::vector<std::string> &arguments /* = std::vector<std::string>() */, uint32_t timeoutMs /* = 0 */, bool waitShutdown /* = false */)
-{
-  int scriptId = ExecuteAsync(script, languageInvoker, addon, arguments);
-  if (scriptId < 0)
-    return -1;
-
-  bool timeout = timeoutMs > 0;
-  while ((!timeout || timeoutMs > 0) && IsRunning(scriptId))
-  {
-    unsigned int sleepMs = 100U;
-    if (timeout && timeoutMs < sleepMs)
-      sleepMs = timeoutMs;
-
-    Sleep(sleepMs);
-
-    if (timeout)
-      timeoutMs -= sleepMs;
-  }
-
-  if (IsRunning(scriptId))
-  {
-    Stop(scriptId, waitShutdown);
-    return ETIMEDOUT;
-  }
-
-  return 0;
 }
 
 bool CScriptInvocationManager::Stop(int scriptId, bool wait /* = false */)

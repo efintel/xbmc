@@ -32,11 +32,10 @@
 #include "filesystem/FavouritesDirectory.h"
 #include "settings/Settings.h"
 #include "settings/MediaSettings.h"
-#include "input/Key.h"
+#include "guilib/Key.h"
 #include "guilib/LocalizeStrings.h"
 #include "utils/log.h"
 #include "utils/URIUtils.h"
-#include "ContextMenuManager.h"
 
 using namespace PLAYLIST;
 
@@ -436,9 +435,6 @@ void CGUIWindowVideoPlaylist::GetContextButtons(int itemNumber, CContextButtons 
     buttons.Add(CONTEXT_BUTTON_EDIT_PARTYMODE, 21439);
     buttons.Add(CONTEXT_BUTTON_CANCEL_PARTYMODE, 588);      // cancel party mode
   }
-
-  if(itemNumber > 0 && itemNumber < m_vecItems->Size())
-    CContextMenuManager::Get().AddVisibleItems(m_vecItems->Get(itemNumber), buttons);
 }
 
 bool CGUIWindowVideoPlaylist::OnContextButton(int itemNumber, CONTEXT_BUTTON button)

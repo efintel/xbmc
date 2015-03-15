@@ -72,6 +72,8 @@ private:
   bool ReadVideoReDo(const std::string& strMovie);
   bool ReadBeyondTV(const std::string& strMovie);
   bool ReadPvr(const std::string& strMovie);
+  bool ReadMythCommBreakList(const std::string& strMovie, const float fFramesPerSecond);
+  bool ReadMythCutList(const std::string& strMovie, const float fFramesPerSecond);
 
   bool AddCut(Cut& NewCut);
   bool AddSceneMarker(const int sceneMarker);

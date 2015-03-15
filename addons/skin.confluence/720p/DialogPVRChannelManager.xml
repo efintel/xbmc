@@ -8,6 +8,7 @@
 		<top>65</top>
 	</coordinates>
 	<include>dialogeffect</include>
+
 	<controls>
 		<control type="image">
 			<left>0</left>
@@ -503,7 +504,7 @@
 					<height>200</height>
 					<aspectratio>keep</aspectratio>
 					<texture background="true">$INFO[Container(20).ListItem.Icon]</texture>
-				</control>
+				</control> 
 			</control>
 			<control type="label">
 				<description>Page Count Label</description>

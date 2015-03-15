@@ -20,7 +20,7 @@
 
 #include "GUICheckMarkControl.h"
 #include "GUIFontManager.h"
-#include "input/Key.h"
+#include "Key.h"
 
 using namespace std;
 

@@ -180,7 +180,7 @@ namespace PVR
      * @brief Remove a channel from all non-system groups.
      * @param channel The channel to remove.
      */
-    void RemoveFromAllGroups(const CPVRChannelPtr &channel);
+    void RemoveFromAllGroups(const CPVRChannel &channel);
 
     /*!
      * @brief Persist all changes in channel groups.

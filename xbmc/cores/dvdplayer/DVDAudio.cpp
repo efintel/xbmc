@@ -40,8 +40,6 @@ CDVDAudio::CDVDAudio(volatile bool &bStop)
   m_iBitrate = 0;
   m_SecondsPerByte = 0.0;
   m_bPaused = true;
-  m_playingPts = DVD_NOPTS_VALUE; //silence coverity uninitialized warning, is set elsewhere
-  m_timeOfPts = 0.0; //silence coverity uninitialized warning, is set elsewhere
 }
 
 CDVDAudio::~CDVDAudio()

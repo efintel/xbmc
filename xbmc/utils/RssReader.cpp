@@ -159,7 +159,8 @@ void CRssReader::Process()
       {
         if (timeout.IsTimePast())
         {
-          CLog::Log(LOGERROR, "Timeout while retrieving rss feed: %s", strUrl.c_str());
+          CLog::Log(LOGERROR, "Timeout whilst retrieving %s", strUrl.c_str());
+          http.Cancel();
           break;
         }
         nRetries--;
@@ -175,18 +176,12 @@ void CRssReader::Process()
           }
         }
         else
-        {
           if (http.Get(strUrl, strXML))
           {
             fileCharset = http.GetServerReportedCharset();
             CLog::Log(LOGDEBUG, "Got rss feed: %s", strUrl.c_str());
             break;
           }
-          else if (nRetries > 0)
-            Sleep(5000); // Network problems? Retry, but not immediately.
-          else
-            CLog::Log(LOGERROR, "Unable to obtain rss feed: %s", strUrl.c_str());
-        }
       }
       http.Cancel();
     }

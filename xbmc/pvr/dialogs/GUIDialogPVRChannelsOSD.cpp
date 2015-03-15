@@ -23,7 +23,7 @@
 #include "ApplicationMessenger.h"
 #include "FileItem.h"
 #include "guilib/GUIWindowManager.h"
-#include "input/Key.h"
+#include "guilib/Key.h"
 #include "guilib/LocalizeStrings.h"
 #include "dialogs/GUIDialogKaiToast.h"
 #include "dialogs/GUIDialogOK.h"
@@ -157,8 +157,8 @@ bool CGUIDialogPVRChannelsOSD::OnAction(const CAction &action)
 
 CPVRChannelGroupPtr CGUIDialogPVRChannelsOSD::GetPlayingGroup()
 {
-  CPVRChannelPtr channel(g_PVRManager.GetCurrentChannel());
-  if (channel)
+  CPVRChannelPtr channel;
+  if (g_PVRManager.GetCurrentChannel(channel))
     return g_PVRManager.GetPlayingGroup(channel->IsRadio());
   else
     return CPVRChannelGroupPtr();
@@ -177,8 +177,8 @@ void CGUIDialogPVRChannelsOSD::Update()
   // empty the list ready for population
   Clear();
 
-  CPVRChannelPtr channel(g_PVRManager.GetCurrentChannel());
-  if (channel)
+  CPVRChannelPtr channel;
+  if (g_PVRManager.GetCurrentChannel(channel))
   {
     CPVRChannelGroupPtr group = g_PVRManager.GetPlayingGroup(channel->IsRadio());
     if (group)
@@ -254,9 +254,9 @@ void CGUIDialogPVRChannelsOSD::GotoChannel(int item)
 
   if (g_PVRManager.IsPlaying() && pItem->HasPVRChannelInfoTag() && g_application.m_pPlayer->HasPlayer())
   {
-    CPVRChannelPtr channel = pItem->GetPVRChannelInfoTag();
-    if (!g_PVRManager.CheckParentalLock(channel) ||
-        !g_application.m_pPlayer->SwitchChannel(channel))
+    CPVRChannel *channel = pItem->GetPVRChannelInfoTag();
+    if (!g_PVRManager.CheckParentalLock(*channel) ||
+        !g_application.m_pPlayer->SwitchChannel(*channel))
     {
       std::string msg = StringUtils::Format(g_localizeStrings.Get(19035).c_str(), channel->ChannelName().c_str()); // CHANNELNAME could not be played. Check the log for details.
       CGUIDialogKaiToast::QueueNotification(CGUIDialogKaiToast::Error,
@@ -281,8 +281,8 @@ void CGUIDialogPVRChannelsOSD::ShowInfo(int item)
   CFileItemPtr pItem = m_vecItems->Get(item);
   if (pItem && pItem->IsPVRChannel())
   {
-    CPVRChannelPtr channel(pItem->GetPVRChannelInfoTag());
-    if (!g_PVRManager.CheckParentalLock(channel))
+    CPVRChannel *channel = pItem->GetPVRChannelInfoTag();
+    if (!g_PVRManager.CheckParentalLock(*channel))
       return;
 
     /* Get the current running show on this channel from the EPG storage */

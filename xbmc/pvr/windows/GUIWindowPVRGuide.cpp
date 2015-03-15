@@ -21,11 +21,10 @@
 #include "GUIWindowPVRGuide.h"
 
 #include "Application.h"
-#include "ContextMenuManager.h"
 #include "GUIUserMessages.h"
 #include "dialogs/GUIDialogOK.h"
 #include "guilib/GUIWindowManager.h"
-#include "input/Key.h"
+#include "guilib/Key.h"
 #include "pvr/PVRManager.h"
 #include "pvr/channels/PVRChannelGroupsContainer.h"
 #include "epg/EpgContainer.h"
@@ -72,9 +71,6 @@ void CGUIWindowPVRGuide::GetContextButtons(int itemNumber, CContextButtons &butt
 
   buttons.Add(CONTEXT_BUTTON_PLAY_ITEM, 19000);         /* switch channel */
 
-  if (pItem->HasEPGInfoTag() && pItem->GetEPGInfoTag()->HasRecording())
-    buttons.Add(CONTEXT_BUTTON_PLAY_OTHER, 19687);      /* play recording */
-
   CFileItemPtr timer = g_PVRTimers->GetTimerForEpgTag(pItem.get());
   if (timer && timer->HasPVRTimerInfoTag())
   {
@@ -107,7 +103,6 @@ void CGUIWindowPVRGuide::GetContextButtons(int itemNumber, CContextButtons &butt
     buttons.Add(CONTEXT_BUTTON_MENU_HOOKS, 19195);      /* PVR client specific action */
 
   CGUIWindowPVRBase::GetContextButtons(itemNumber, buttons);
-  CContextMenuManager::Get().AddVisibleItems(pItem, buttons);
 }
 
 void CGUIWindowPVRGuide::UpdateSelectedItemPath()
@@ -117,8 +112,8 @@ void CGUIWindowPVRGuide::UpdateSelectedItemPath()
     CGUIEPGGridContainer *epgGridContainer = (CGUIEPGGridContainer*) GetControl(m_viewControl.GetCurrentControl());
     if (epgGridContainer)
     {
-      CPVRChannelPtr channel(epgGridContainer->GetChannel(epgGridContainer->GetSelectedChannel()));
-      if (channel)
+      CPVRChannel* channel = epgGridContainer->GetChannel(epgGridContainer->GetSelectedChannel());
+      if (channel != NULL)
         SetSelectedItemPath(m_bRadio, channel->Path());
     }
   }
@@ -173,11 +168,7 @@ bool CGUIWindowPVRGuide::OnMessage(CGUIMessage& message)
                   bReturn = true;
                   break;
                 case EPG_SELECT_ACTION_SWITCH:
-                  ActionPlayEpg(pItem.get(), false);
-                  bReturn = true;
-                  break;
-                case EPG_SELECT_ACTION_PLAY_RECORDING:
-                  ActionPlayEpg(pItem.get(), true);
+                  ActionPlayEpg(pItem.get());
                   bReturn = true;
                   break;
                 case EPG_SELECT_ACTION_INFO:
@@ -195,7 +186,7 @@ bool CGUIWindowPVRGuide::OnMessage(CGUIMessage& message)
               bReturn = true;
               break;
             case ACTION_PLAY:
-              ActionPlayEpg(pItem.get(), true);
+              ActionPlayEpg(pItem.get());
               bReturn = true;
               break;
             case ACTION_RECORD:
@@ -275,14 +266,15 @@ bool CGUIWindowPVRGuide::OnContextButton(int itemNumber, CONTEXT_BUTTON button)
 
 void CGUIWindowPVRGuide::UpdateViewChannel()
 {
-  CPVRChannelPtr currentChannel(g_PVRManager.GetCurrentChannel());
+  CPVRChannelPtr currentChannel;
+  bool bGotCurrentChannel = g_PVRManager.GetCurrentChannel(currentChannel);
 
-  if (currentChannel)
+  if (bGotCurrentChannel && currentChannel.get())
     SET_CONTROL_LABEL(CONTROL_LABEL_HEADER1, currentChannel->ChannelName().c_str());
   SET_CONTROL_LABEL(CONTROL_LABEL_HEADER2, GetGroup()->GroupName());
 
   m_vecItems->Clear();
-  if (!currentChannel || g_PVRManager.GetCurrentEpg(*m_vecItems) == 0)
+  if (!bGotCurrentChannel || g_PVRManager.GetCurrentEpg(*m_vecItems) == 0)
   {
     CFileItemPtr item;
     item.reset(new CFileItem("pvr://guide/channel/empty.epg", false));
@@ -468,9 +460,9 @@ bool CGUIWindowPVRGuide::OnContextButtonPlay(CFileItem *item, CONTEXT_BUTTON but
 {
   bool bReturn = false;
 
-  if (button == CONTEXT_BUTTON_PLAY_ITEM || button == CONTEXT_BUTTON_PLAY_OTHER)
+  if (button == CONTEXT_BUTTON_PLAY_ITEM)
   {
-    ActionPlayEpg(item, button == CONTEXT_BUTTON_PLAY_OTHER);
+    ActionPlayEpg(item);
     bReturn = true;
   }
 

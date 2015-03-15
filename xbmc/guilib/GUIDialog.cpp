@@ -26,7 +26,7 @@
 #include "utils/TimeUtils.h"
 #include "Application.h"
 #include "ApplicationMessenger.h"
-#include "input/Key.h"
+#include "Key.h"
 
 CGUIDialog::CGUIDialog(int id, const std::string &xmlFile)
     : CGUIWindow(id, xmlFile)

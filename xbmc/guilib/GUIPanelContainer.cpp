@@ -21,7 +21,7 @@
 #include "GUIPanelContainer.h"
 #include "GUIListItem.h"
 #include "GUIInfoManager.h"
-#include "input/Key.h"
+#include "Key.h"
 
 #include <cassert>
 

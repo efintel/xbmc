@@ -534,7 +534,9 @@ int CWin32File::Stat(const CURL& url, struct __stat64* statData)
     FILE_BASIC_INFO basicInfo;
     if (GetFileInformationByHandleEx(hFile, FileBasicInfo, &basicInfo, sizeof(basicInfo)) != 0)
     {
-      statData->st_mtime = CWIN32Util::fileTimeToTimeT(basicInfo.LastWriteTime);
+      statData->st_mtime = CWIN32Util::fileTimeToTimeT(basicInfo.ChangeTime); // most accurate value
+      if (statData->st_mtime == 0)
+        statData->st_mtime = CWIN32Util::fileTimeToTimeT(basicInfo.LastWriteTime); // less accurate value
       statData->st_atime = CWIN32Util::fileTimeToTimeT(basicInfo.LastAccessTime);
       statData->st_ctime = CWIN32Util::fileTimeToTimeT(basicInfo.CreationTime);
     }
@@ -637,7 +639,9 @@ int CWin32File::Stat(struct __stat64* statData)
   if (GetFileInformationByHandleEx(m_hFile, FileBasicInfo, &basicInfo, sizeof(basicInfo)) == 0)
     return -1; // can't get basic file information
 
-  statData->st_mtime = CWIN32Util::fileTimeToTimeT(basicInfo.LastWriteTime);
+  statData->st_mtime = CWIN32Util::fileTimeToTimeT(basicInfo.ChangeTime); // most accurate value
+  if (statData->st_mtime == 0)
+    statData->st_mtime = CWIN32Util::fileTimeToTimeT(basicInfo.LastWriteTime); // less accurate value
 
   statData->st_atime = CWIN32Util::fileTimeToTimeT(basicInfo.LastAccessTime);
   if (statData->st_atime == 0)

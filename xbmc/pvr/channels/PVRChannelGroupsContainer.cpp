@@ -217,14 +217,38 @@ CPVRChannelPtr CPVRChannelGroupsContainer::GetByUniqueID(int iUniqueChannelId, i
   CPVRChannelPtr channel;
   CPVRChannelGroupPtr channelgroup = GetGroupAllTV();
   if (channelgroup)
-    channel = channelgroup->GetByUniqueID(iUniqueChannelId, iClientID);
+    channel = channelgroup->GetByClient(iUniqueChannelId, iClientID);
 
   if (!channelgroup || !channel)
     channelgroup = GetGroupAllRadio();
   if (channelgroup)
-    channel = channelgroup->GetByUniqueID(iUniqueChannelId, iClientID);
+    channel = channelgroup->GetByClient(iUniqueChannelId, iClientID);
 
   return channel;
+}
+
+CFileItemPtr CPVRChannelGroupsContainer::GetByChannelIDFromAll(int iChannelID) const
+{
+  CPVRChannelPtr channel;
+  CPVRChannelGroupPtr channelgroup = GetGroupAllTV();
+  if (channelgroup)
+    channel = channelgroup->GetByChannelID(iChannelID);
+
+  if (!channel)
+  {
+    channelgroup = GetGroupAllRadio();
+    if (channelgroup)
+      channel = channelgroup->GetByChannelID(iChannelID);
+  }
+
+  if (channel)
+  {
+    CFileItemPtr retVal = CFileItemPtr(new CFileItem(*channel));
+    return retVal;
+  }
+
+  CFileItemPtr retVal = CFileItemPtr(new CFileItem);
+  return retVal;
 }
 
 void CPVRChannelGroupsContainer::SearchMissingChannelIcons(void) const

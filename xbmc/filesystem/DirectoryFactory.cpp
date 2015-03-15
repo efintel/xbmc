@@ -77,6 +77,12 @@
 #ifdef HAS_FILESYSTEM_SAP
 #include "SAPDirectory.h"
 #endif
+#ifdef HAS_FILESYSTEM_VTP
+#include "VTPDirectory.h"
+#endif
+#ifdef HAS_FILESYSTEM_HTSP
+#include "HTSPDirectory.h"
+#endif
 #ifdef HAS_PVRCLIENTS
 #include "PVRDirectory.h"
 #endif
@@ -87,8 +93,10 @@
 #ifdef HAS_FILESYSTEM_RAR
 #include "RarDirectory.h"
 #endif
+#include "TuxBoxDirectory.h"
 #include "HDHomeRunDirectory.h"
 #include "SlingboxDirectory.h"
+#include "MythDirectory.h"
 #include "FileItem.h"
 #include "URL.h"
 #include "RSSDirectory.h"
@@ -101,13 +109,15 @@
 #ifdef HAS_FILESYSTEM_NFS
 #include "NFSDirectory.h"
 #endif
+#ifdef HAS_FILESYSTEM_AFP
+#include "AFPDirectory.h"
+#endif
 #ifdef HAVE_LIBBLURAY
 #include "BlurayDirectory.h"
 #endif
 #if defined(TARGET_ANDROID)
 #include "AndroidAppDirectory.h"
 #endif
-#include "ResourceDirectory.h"
 
 using namespace XFILE;
 
@@ -178,6 +188,7 @@ IDirectory* CDirectoryFactory::Create(const CURL& url)
   bool networkAvailable = g_application.getNetwork().IsAvailable(true); // true to wait for the network (if possible)
   if (networkAvailable)
   {
+    if (url.IsProtocol("tuxbox")) return new CTuxBoxDirectory();
     if (url.IsProtocol("ftp") || url.IsProtocol("ftps")) return new CFTPDirectory();
     if (url.IsProtocol("http") || url.IsProtocol("https")) return new CHTTPDirectory();
     if (url.IsProtocol("dav") || url.IsProtocol("davs")) return new CDAVDirectory();
@@ -204,9 +215,17 @@ IDirectory* CDirectoryFactory::Create(const CURL& url)
 #endif
     if (url.IsProtocol("hdhomerun")) return new CHomeRunDirectory();
     if (url.IsProtocol("sling")) return new CSlingboxDirectory();
+    if (url.IsProtocol("myth")) return new CMythDirectory();
+    if (url.IsProtocol("cmyth")) return new CMythDirectory();
     if (url.IsProtocol("rss")) return new CRSSDirectory();
 #ifdef HAS_FILESYSTEM_SAP
     if (url.IsProtocol("sap")) return new CSAPDirectory();
+#endif
+#ifdef HAS_FILESYSTEM_VTP
+    if (url.IsProtocol("vtp")) return new CVTPDirectory();
+#endif
+#ifdef HAS_FILESYSTEM_HTSP
+    if (url.IsProtocol("htsp")) return new CHTSPDirectory();
 #endif
 #ifdef HAS_PVRCLIENTS
     if (url.IsProtocol("pvr")) return new CPVRDirectory();
@@ -217,10 +236,12 @@ IDirectory* CDirectoryFactory::Create(const CURL& url)
 #ifdef HAS_FILESYSTEM_NFS
     if (url.IsProtocol("nfs")) return new CNFSDirectory();
 #endif
+#ifdef HAS_FILESYSTEM_AFP
+      if (url.IsProtocol("afp")) return new CAFPDirectory();
+#endif
 #ifdef HAVE_LIBBLURAY
       if (url.IsProtocol("bluray")) return new CBlurayDirectory();
 #endif
-      if (url.IsProtocol("resource")) return new CResourceDirectory();
   }
 
   CLog::Log(LOGWARNING, "%s - %sunsupported protocol(%s) in %s", __FUNCTION__, networkAvailable ? "" : "Network down or ", url.GetProtocol().c_str(), url.GetRedacted().c_str() );

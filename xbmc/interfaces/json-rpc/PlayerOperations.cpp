@@ -24,7 +24,7 @@
 #include "PlayListPlayer.h"
 #include "playlists/PlayList.h"
 #include "guilib/GUIWindowManager.h"
-#include "input/Key.h"
+#include "guilib/Key.h"
 #include "GUIUserMessages.h"
 #include "pictures/GUIWindowSlideShow.h"
 #include "interfaces/Builtins.h"
@@ -168,9 +168,9 @@ JSONRPC_STATUS CPlayerOperations::GetItem(const std::string &method, ITransportL
       fileItem = CFileItemPtr(new CFileItem(g_application.CurrentFileItem()));
       if (IsPVRChannel())
       {
-        CPVRChannelPtr currentChannel(g_PVRManager.GetCurrentChannel());
-        if (currentChannel)
-          fileItem = CFileItemPtr(new CFileItem(currentChannel));
+        CPVRChannelPtr currentChannel;
+        if (g_PVRManager.GetCurrentChannel(currentChannel) && currentChannel.get() != NULL)
+          fileItem = CFileItemPtr(new CFileItem(*currentChannel.get()));
       }
       else if (player == Video)
       {
@@ -594,11 +594,11 @@ JSONRPC_STATUS CPlayerOperations::Open(const std::string &method, ITransportLaye
     if (channel == NULL)
       return InvalidParams;
 
-    if ((g_PVRManager.IsPlayingRadio() && channel->IsRadio()) ||
-        (g_PVRManager.IsPlayingTV() && !channel->IsRadio()))
-      g_application.m_pPlayer->SwitchChannel(channel);
+    if ((g_PVRManager.IsPlayingRadio() && channel.get()->IsRadio()) ||
+        (g_PVRManager.IsPlayingTV() && !channel.get()->IsRadio()))
+      g_application.m_pPlayer->SwitchChannel(*channel.get());
     else
-      CApplicationMessenger::Get().MediaPlay(CFileItem(channel));
+      CApplicationMessenger::Get().MediaPlay(CFileItem(*channel.get()));
 
     return ACK;
   }
@@ -1666,8 +1666,8 @@ EPG::CEpgInfoTagPtr CPlayerOperations::GetCurrentEpg()
   if (!g_PVRManager.IsPlayingTV() && !g_PVRManager.IsPlayingRadio())
     return EPG::CEpgInfoTagPtr();
 
-  CPVRChannelPtr currentChannel(g_PVRManager.GetCurrentChannel());
-  if (!currentChannel)
+  CPVRChannelPtr currentChannel;
+  if (!g_PVRManager.GetCurrentChannel(currentChannel))
     return EPG::CEpgInfoTagPtr();
 
   return currentChannel->GetEPGNow();

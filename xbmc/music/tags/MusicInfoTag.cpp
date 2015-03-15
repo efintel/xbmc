@@ -124,7 +124,11 @@ const CMusicInfoTag& CMusicInfoTag::operator =(const CMusicInfoTag& tag)
   m_iDbId = tag.m_iDbId;
   m_type = tag.m_type;
   m_iAlbumId = tag.m_iAlbumId;
-  m_replayGain = tag.m_replayGain;
+  m_iTrackGain = tag.m_iTrackGain;
+  m_iAlbumGain = tag.m_iAlbumGain;
+  m_fTrackPeak = tag.m_fTrackPeak;
+  m_fAlbumPeak = tag.m_fAlbumPeak;
+  m_iHasGainInfo = tag.m_iHasGainInfo;
 
   memcpy(&m_dwReleaseDate, &tag.m_dwReleaseDate, sizeof(m_dwReleaseDate) );
   m_coverArt = tag.m_coverArt;
@@ -270,9 +274,29 @@ const EmbeddedArtInfo &CMusicInfoTag::GetCoverArtInfo() const
   return m_coverArt;
 }
 
-const ReplayGain& CMusicInfoTag::GetReplayGain() const
+int CMusicInfoTag::GetReplayGainTrackGain() const
 {
-  return m_replayGain;
+  return m_iTrackGain;
+}
+
+int CMusicInfoTag::GetReplayGainAlbumGain() const
+{
+  return m_iAlbumGain;
+}
+
+float CMusicInfoTag::GetReplayGainTrackPeak() const
+{
+  return m_fTrackPeak;
+}
+
+float CMusicInfoTag::GetReplayGainAlbumPeak() const
+{
+  return m_fAlbumPeak;
+}
+
+int CMusicInfoTag::HasReplayGainInfo() const
+{
+  return m_iHasGainInfo;
 }
 
 void CMusicInfoTag::SetURL(const std::string& strURL)
@@ -481,9 +505,28 @@ void CMusicInfoTag::SetCoverArtInfo(size_t size, const std::string &mimeType)
   m_coverArt.set(size, mimeType);
 }
 
-void CMusicInfoTag::SetReplayGain(const ReplayGain& aGain)
+void CMusicInfoTag::SetReplayGainTrackGain(int trackGain)
 {
-  m_replayGain = aGain;
+  m_iTrackGain = trackGain;
+  m_iHasGainInfo |= REPLAY_GAIN_HAS_TRACK_INFO;
+}
+
+void CMusicInfoTag::SetReplayGainAlbumGain(int albumGain)
+{
+  m_iAlbumGain = albumGain;
+  m_iHasGainInfo |= REPLAY_GAIN_HAS_ALBUM_INFO;
+}
+
+void CMusicInfoTag::SetReplayGainTrackPeak(float trackPeak)
+{
+  m_fTrackPeak = trackPeak;
+  m_iHasGainInfo |= REPLAY_GAIN_HAS_TRACK_PEAK;
+}
+
+void CMusicInfoTag::SetReplayGainAlbumPeak(float albumPeak)
+{
+  m_fAlbumPeak = albumPeak;
+  m_iHasGainInfo |= REPLAY_GAIN_HAS_ALBUM_PEAK;
 }
 
 void CMusicInfoTag::SetArtist(const CArtist& artist)
@@ -540,11 +583,6 @@ void CMusicInfoTag::SetSong(const CSong& song)
   m_bLoaded = true;
   m_iTimesPlayed = song.iTimesPlayed;
   m_iAlbumId = song.idAlbum;
-
-  if (song.replayGain.Get(ReplayGain::TRACK).Valid())
-    m_replayGain.Set(ReplayGain::TRACK, song.replayGain.Get(ReplayGain::TRACK));
-  if (song.replayGain.Get(ReplayGain::ALBUM).Valid())
-    m_replayGain.Set(ReplayGain::ALBUM, song.replayGain.Get(ReplayGain::ALBUM));
 }
 
 void CMusicInfoTag::Serialize(CVariant& value) const
@@ -698,7 +736,11 @@ void CMusicInfoTag::Clear()
   memset(&m_dwReleaseDate, 0, sizeof(m_dwReleaseDate) );
   m_iAlbumId = -1;
   m_coverArt.clear();
-  m_replayGain = ReplayGain();
+  m_iTrackGain = 0;
+  m_iAlbumGain = 0;
+  m_fTrackPeak = 0.0f;
+  m_fAlbumPeak = 0.0f;
+  m_iHasGainInfo = 0;
 }
 
 void CMusicInfoTag::AppendArtist(const std::string &artist)

@@ -102,30 +102,9 @@ bool CAudioDecoder::Create(const CFileItem &file, int64_t seekOffset)
   /* allocate the pcmBuffer for 2 seconds of audio */
   m_pcmBuffer.Create(2 * blockSize * m_codec->m_SampleRate);
 
-  if (file.HasMusicInfoTag())
-  {
-    // set total time from the given tag
-    if (file.GetMusicInfoTag()->GetDuration())
-      m_codec->SetTotalTime(file.GetMusicInfoTag()->GetDuration());
-
-    // update ReplayGain from the given tag if it's better then original (cuesheet)
-    ReplayGain rgInfo = m_codec->m_tag.GetReplayGain();
-    bool anySet = false;
-    if (!rgInfo.Get(ReplayGain::ALBUM).Valid()
-      && file.GetMusicInfoTag()->GetReplayGain().Get(ReplayGain::ALBUM).Valid())
-    {
-      rgInfo.Set(ReplayGain::ALBUM, file.GetMusicInfoTag()->GetReplayGain().Get(ReplayGain::ALBUM));
-      anySet = true;
-    }
-    if (!rgInfo.Get(ReplayGain::TRACK).Valid()
-      && file.GetMusicInfoTag()->GetReplayGain().Get(ReplayGain::TRACK).Valid())
-    {
-      rgInfo.Set(ReplayGain::TRACK, file.GetMusicInfoTag()->GetReplayGain().Get(ReplayGain::TRACK));
-      anySet = true;
-    }
-    if (anySet)
-      m_codec->m_tag.SetReplayGain(rgInfo);
-  }
+  // set total time from the given tag
+  if (file.HasMusicInfoTag() && file.GetMusicInfoTag()->GetDuration())
+    m_codec->SetTotalTime(file.GetMusicInfoTag()->GetDuration());
 
   if (seekOffset)
     m_codec->Seek(seekOffset);
@@ -264,37 +243,36 @@ float CAudioDecoder::GetReplayGain()
 {
 #define REPLAY_GAIN_DEFAULT_LEVEL 89.0f
   const ReplayGainSettings &replayGainSettings = g_application.GetReplayGainSettings();
-  if (replayGainSettings.iType == ReplayGain::NONE)
+  if (replayGainSettings.iType == REPLAY_GAIN_NONE)
     return 1.0f;
 
   // Compute amount of gain
   float replaydB = (float)replayGainSettings.iNoGainPreAmp;
   float peak = 0.0f;
-  const ReplayGain& rgInfo = m_codec->m_tag.GetReplayGain();
-  if (replayGainSettings.iType == ReplayGain::ALBUM)
+  if (replayGainSettings.iType == REPLAY_GAIN_ALBUM)
   {
-    if (rgInfo.Get(ReplayGain::ALBUM).Valid())
+    if (m_codec->m_tag.HasReplayGainInfo() & REPLAY_GAIN_HAS_ALBUM_INFO)
     {
-      replaydB = (float)replayGainSettings.iPreAmp + rgInfo.Get(ReplayGain::ALBUM).Gain();
-      peak = rgInfo.Get(ReplayGain::ALBUM).Peak();
+      replaydB = (float)replayGainSettings.iPreAmp + (float)m_codec->m_tag.GetReplayGainAlbumGain() * 0.01f;
+      peak = m_codec->m_tag.GetReplayGainAlbumPeak();
     }
-    else if (rgInfo.Get(ReplayGain::TRACK).Valid())
+    else if (m_codec->m_tag.HasReplayGainInfo() & REPLAY_GAIN_HAS_TRACK_INFO)
     {
-      replaydB = (float)replayGainSettings.iPreAmp + rgInfo.Get(ReplayGain::TRACK).Gain();
-      peak = rgInfo.Get(ReplayGain::TRACK).Peak();
+      replaydB = (float)replayGainSettings.iPreAmp + (float)m_codec->m_tag.GetReplayGainTrackGain() * 0.01f;
+      peak = m_codec->m_tag.GetReplayGainTrackPeak();
     }
   }
-  else if (replayGainSettings.iType == ReplayGain::TRACK)
+  else if (replayGainSettings.iType == REPLAY_GAIN_TRACK)
   {
-    if (rgInfo.Get(ReplayGain::TRACK).Valid())
+    if (m_codec->m_tag.HasReplayGainInfo() & REPLAY_GAIN_HAS_TRACK_INFO)
     {
-      replaydB = (float)replayGainSettings.iPreAmp + rgInfo.Get(ReplayGain::TRACK).Gain();
-      peak = rgInfo.Get(ReplayGain::TRACK).Peak();
+      replaydB = (float)replayGainSettings.iPreAmp + (float)m_codec->m_tag.GetReplayGainTrackGain() * 0.01f;
+      peak = m_codec->m_tag.GetReplayGainTrackPeak();
     }
-    else if (rgInfo.Get(ReplayGain::ALBUM).Valid())
+    else if (m_codec->m_tag.HasReplayGainInfo() & REPLAY_GAIN_HAS_ALBUM_INFO)
     {
-      replaydB = (float)replayGainSettings.iPreAmp + rgInfo.Get(ReplayGain::ALBUM).Gain();
-      peak = rgInfo.Get(ReplayGain::ALBUM).Peak();
+      replaydB = (float)replayGainSettings.iPreAmp + (float)m_codec->m_tag.GetReplayGainAlbumGain() * 0.01f;
+      peak = m_codec->m_tag.GetReplayGainAlbumPeak();
     }
   }
   // convert to a gain type

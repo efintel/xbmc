@@ -41,7 +41,7 @@
 #include "settings/MediaSourceSettings.h"
 #include "settings/Settings.h"
 #include "FileItem.h"
-#include "input/Key.h"
+#include "guilib/Key.h"
 #include "filesystem/AddonsDirectory.h"
 #include "guilib/TextureManager.h"
 
@@ -560,7 +560,7 @@ CGUIViewStateFromItems::CGUIViewStateFromItems(const CFileItemList &items) : CGU
   {
     CURL url(items.GetPath());
     AddonPtr addon;
-    if (CAddonMgr::Get().GetAddon(url.GetHostName(), addon, ADDON_PLUGIN))
+    if (CAddonMgr::Get().GetAddon(url.GetHostName(),addon) && addon)
     {
       PluginPtr plugin = std::static_pointer_cast<CPluginSource>(addon);
       if (plugin->Provides(CPluginSource::AUDIO))

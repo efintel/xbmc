@@ -47,7 +47,6 @@
 #include "guilib/GUIColorManager.h"
 #include "guilib/StereoscopicsManager.h"
 #include "guilib/GUITextLayout.h"
-#include "addons/LanguageResource.h"
 #include "addons/Skin.h"
 #include "interfaces/generic/ScriptInvocationManager.h"
 #ifdef HAS_PYTHON
@@ -66,10 +65,15 @@
 #include "filesystem/StackDirectory.h"
 #include "filesystem/SpecialProtocol.h"
 #include "filesystem/DllLibCurl.h"
+#include "filesystem/MythSession.h"
 #include "filesystem/PluginDirectory.h"
 #ifdef HAS_FILESYSTEM_SAP
 #include "filesystem/SAPDirectory.h"
 #endif
+#ifdef HAS_FILESYSTEM_HTSP
+#include "filesystem/HTSPDirectory.h"
+#endif
+#include "utils/TuxBoxUtil.h"
 #include "utils/SystemInfo.h"
 #include "utils/TimeUtils.h"
 #include "GUILargeTextureManager.h"
@@ -96,7 +100,6 @@
 #include "utils/SeekHandler.h"
 #include "view/ViewStateSettings.h"
 
-#include "input/KeyboardLayoutManager.h"
 #include "input/KeyboardStat.h"
 #include "input/XBMC_vkeys.h"
 #include "input/MouseStat.h"
@@ -120,6 +123,9 @@
 #endif
 #ifdef HAS_FILESYSTEM_NFS
 #include "filesystem/NFSFile.h"
+#endif
+#ifdef HAS_FILESYSTEM_AFP
+#include "filesystem/AFPFile.h"
 #endif
 #ifdef HAS_FILESYSTEM_SFTP
 #include "filesystem/SFTPFile.h"
@@ -229,6 +235,13 @@
 
 #ifdef TARGET_POSIX
 #include "XHandle.h"
+#endif
+
+#ifdef HAS_LIRC
+#include "input/linux/LIRC.h"
+#endif
+#ifdef HAS_IRSERVERSUITE
+  #include "input/windows/IRServerSuite.h"
 #endif
 
 #if defined(TARGET_ANDROID)
@@ -365,6 +378,18 @@ bool CApplication::OnEvent(XBMC_Event& newEvent)
       if (!g_application.m_bStop)
         CApplicationMessenger::Get().Quit();
       break;
+    case XBMC_KEYDOWN:
+      g_application.OnKey(g_Keyboard.ProcessKeyDown(newEvent.key.keysym));
+      break;
+    case XBMC_KEYUP:
+      g_Keyboard.ProcessKeyUp();
+      break;
+    case XBMC_MOUSEBUTTONDOWN:
+    case XBMC_MOUSEBUTTONUP:
+    case XBMC_MOUSEMOTION:
+      g_Mouse.HandleEvent(newEvent);
+      CInputManager::GetInstance().ProcessMouse(g_windowManager.GetActiveWindowID());
+      break;
     case XBMC_VIDEORESIZE:
       if (!g_application.m_bInitializing &&
           !g_advancedSettings.m_fullScreen)
@@ -396,6 +421,38 @@ bool CApplication::OnEvent(XBMC_Event& newEvent)
       break;
     case XBMC_APPCOMMAND:
       return g_application.OnAppCommand(newEvent.appcommand.action);
+    case XBMC_TOUCH:
+    {
+      if (newEvent.touch.action == ACTION_TOUCH_TAP)
+      { // Send a mouse motion event with no dx,dy for getting the current guiitem selected
+        g_application.OnAction(CAction(ACTION_MOUSE_MOVE, 0, newEvent.touch.x, newEvent.touch.y, 0, 0));
+      }
+      int actionId = 0;
+      if (newEvent.touch.action == ACTION_GESTURE_BEGIN || newEvent.touch.action == ACTION_GESTURE_END)
+        actionId = newEvent.touch.action;
+      else
+      {
+        int iWin = g_windowManager.GetActiveWindowID();
+        CButtonTranslator::GetInstance().TranslateTouchAction(iWin, newEvent.touch.action, newEvent.touch.pointers, actionId);
+      }
+
+      if (actionId <= 0)
+        return false;
+
+      if ((actionId >= ACTION_TOUCH_TAP && actionId <= ACTION_GESTURE_END)
+          || (actionId >= ACTION_MOUSE_START && actionId <= ACTION_MOUSE_END) )
+        CApplicationMessenger::Get().SendAction(CAction(actionId, 0, newEvent.touch.x, newEvent.touch.y, newEvent.touch.x2, newEvent.touch.y2), WINDOW_INVALID, false);
+      else
+        CApplicationMessenger::Get().SendAction(CAction(actionId), WINDOW_INVALID, false);
+
+      // Post an unfocus message for touch device after the action.
+      if (newEvent.touch.action == ACTION_GESTURE_END || newEvent.touch.action == ACTION_TOUCH_TAP)
+      {
+        CGUIMessage msg(GUI_MSG_UNFOCUS_ALL, 0, 0, 0, 0);
+        CApplicationMessenger::Get().SendGUIMessage(msg);
+      }
+      break;
+    }
     case XBMC_SETFOCUS:
       // Reset the screensaver
       g_application.ResetScreenSaver();
@@ -403,8 +460,6 @@ bool CApplication::OnEvent(XBMC_Event& newEvent)
       // Send a mouse motion event with no dx,dy for getting the current guiitem selected
       g_application.OnAction(CAction(ACTION_MOUSE_MOVE, 0, static_cast<float>(newEvent.focus.x), static_cast<float>(newEvent.focus.y), 0, 0));
       break;
-    default:
-      return CInputManager::Get().OnEvent(newEvent);
   }
   return true;
 }
@@ -658,9 +713,25 @@ bool CApplication::Create()
 
   update_emu_environ();//apply the GUI settings
 
-#ifdef TARGET_WINDOWS
-  CWIN32Util::SetThreadLocalLocale(true); // enable independent locale for each thread, see https://connect.microsoft.com/VisualStudio/feedback/details/794122
-#endif // TARGET_WINDOWS
+  // Load the langinfo to have user charset <-> utf-8 conversion
+  std::string strLanguage = CSettings::Get().GetString("locale.language");
+  strLanguage[0] = toupper(strLanguage[0]);
+
+  std::string strLangInfoPath = StringUtils::Format("special://xbmc/language/%s/langinfo.xml", strLanguage.c_str());
+
+  CLog::Log(LOGINFO, "load language info file: %s", strLangInfoPath.c_str());
+  g_langInfo.Load(strLangInfoPath);
+  g_langInfo.SetAudioLanguage(CSettings::Get().GetString("locale.audiolanguage"));
+  g_langInfo.SetSubtitleLanguage(CSettings::Get().GetString("locale.subtitlelanguage"));
+
+  std::string strLanguagePath = "special://xbmc/language/";
+
+  CLog::Log(LOGINFO, "load %s language file, from path: %s", strLanguage.c_str(), strLanguagePath.c_str());
+  if (!g_localizeStrings.Load(strLanguagePath, strLanguage))
+  {
+    CLog::LogF(LOGFATAL, "Failed to load %s language file, from path: %s", strLanguage.c_str(), strLanguagePath.c_str());
+    return false;
+  }
 
 #ifdef TARGET_WINDOWS
   CWIN32Util::SetThreadLocalLocale(true); // enable independent locale for each thread, see https://connect.microsoft.com/VisualStudio/feedback/details/794122
@@ -698,19 +769,18 @@ bool CApplication::Create()
     CLog::Log(LOGFATAL, "CApplication::Create: Unable to start CAddonMgr");
     return false;
   }
+#if defined(HAS_LIRC) || defined(HAS_IRSERVERSUITE)
+  g_RemoteControl.Initialize();
+#endif
 
   g_peripherals.Initialise();
 
   // Create the Mouse, Keyboard, Remote, and Joystick devices
   // Initialize after loading settings to get joystick deadzone setting
-  CInputManager::Get().InitializeInputs();
+  g_Mouse.Initialize();
+  g_Mouse.SetEnabled(CSettings::Get().GetBool("input.enablemouse"));
 
-  // load the keyboard layouts
-  if (!CKeyboardLayoutManager::Get().Load())
-  {
-    CLog::Log(LOGFATAL, "CApplication::Create: Unable to load keyboard layouts");
-    return false;
-  }
+  g_Keyboard.Initialize();
 
 #if defined(TARGET_DARWIN_OSX)
   // Configure and possible manually start the helper.
@@ -737,7 +807,7 @@ bool CApplication::CreateGUI()
 
   uint32_t sdlFlags = 0;
 
-#if defined(TARGET_DARWIN_OSX)
+#if (defined(HAS_SDL_OPENGL) || (HAS_GLES == 2)) && !defined(HAS_GLX)
   sdlFlags |= SDL_INIT_VIDEO;
 #endif
 
@@ -937,11 +1007,11 @@ bool CApplication::InitDirectoriesLinux()
     appPath = appBinPath;
     /* Check if binaries and arch independent data files are being kept in
      * separate locations. */
-    if (!CDirectory::Exists(URIUtils::AddFileToFolder(appPath, "userdata")))
+    if (!CDirectory::Exists(URIUtils::AddFileToFolder(appPath, "language")))
     {
       /* Attempt to locate arch independent data files. */
       CUtil::GetHomePath(appPath);
-      if (!CDirectory::Exists(URIUtils::AddFileToFolder(appPath, "userdata")))
+      if (!CDirectory::Exists(URIUtils::AddFileToFolder(appPath, "language")))
       {
         fprintf(stderr, "Unable to find path to %s data files!\n", appName.c_str());
         exit(1);
@@ -1147,14 +1217,10 @@ bool CApplication::Initialize()
   if (!m_bPlatformDirectories)
 #endif
   {
+    CDirectory::Create("special://xbmc/language");
     CDirectory::Create("special://xbmc/addons");
     CDirectory::Create("special://xbmc/sounds");
   }
-
-  // load the language and its translated strings
-  bool fallbackLanguage = false;
-  if (!LoadLanguage(false, fallbackLanguage))
-    return false;
 
   // Load curl so curl_global_init gets called before any service threads
   // are started. Unloading will have no effect as curl is never fully unloaded.
@@ -1252,12 +1318,9 @@ bool CApplication::Initialize()
   ResetScreenSaver();
 
 #ifdef HAS_SDL_JOYSTICK
-  CInputManager::Get().SetEnabledJoystick(CSettings::Get().GetBool("input.enablejoystick") &&
+  CInputManager::GetInstance().SetEnabledJoystick(CSettings::Get().GetBool("input.enablejoystick") &&
                     CPeripheralImon::GetCountOfImonsConflictWithDInput() == 0 );
 #endif
-
-  if (fallbackLanguage)
-    CGUIDialogOK::ShowAndGetInput(24133, 24134);
 
   // show info dialog about moved configuration files if needed
   ShowAppMigrationMessage();
@@ -2021,6 +2084,153 @@ void CApplication::SetStandAlone(bool value)
   g_advancedSettings.m_handleMounting = m_bStandalone = value;
 }
 
+// OnKey() translates the key into a CAction which is sent on to our Window Manager.
+// The window manager will return true if the event is processed, false otherwise.
+// If not already processed, this routine handles global keypresses.  It returns
+// true if the key has been processed, false otherwise.
+
+bool CApplication::OnKey(const CKey& key)
+{
+
+  // Turn the mouse off, as we've just got a keypress from controller or remote
+  g_Mouse.SetActive(false);
+
+  // get the current active window
+  int iWin = g_windowManager.GetActiveWindowID();
+
+  // this will be checked for certain keycodes that need
+  // special handling if the screensaver is active
+  CAction action = CButtonTranslator::GetInstance().GetAction(iWin, key);
+
+  // a key has been pressed.
+  // reset Idle Timer
+  m_idleTimer.StartZero();
+  bool processKey = AlwaysProcess(action);
+
+  if (StringUtils::StartsWithNoCase(action.GetName(),"CECToggleState") || StringUtils::StartsWithNoCase(action.GetName(),"CECStandby"))
+  {
+    // do not wake up the screensaver right after switching off the playing device
+    if (StringUtils::StartsWithNoCase(action.GetName(),"CECToggleState"))
+    {
+      CLog::LogF(LOGDEBUG, "action %s [%d], toggling state of playing device", action.GetName().c_str(), action.GetID());
+      if (!CApplicationMessenger::Get().CECToggleState())
+        return true;
+    }
+    else
+    {
+      CApplicationMessenger::Get().CECStandby();
+      return true;
+    }
+  }
+
+  ResetScreenSaver();
+
+  // allow some keys to be processed while the screensaver is active
+  if (WakeUpScreenSaverAndDPMS(processKey) && !processKey)
+  {
+    CLog::LogF(LOGDEBUG, "%s pressed, screen saver/dpms woken up", g_Keyboard.GetKeyName((int) key.GetButtonCode()).c_str());
+    return true;
+  }
+
+  if (iWin != WINDOW_FULLSCREEN_VIDEO)
+  {
+    // current active window isnt the fullscreen window
+    // just use corresponding section from keymap.xml
+    // to map key->action
+
+    // first determine if we should use keyboard input directly
+    bool useKeyboard = key.FromKeyboard() && (iWin == WINDOW_DIALOG_KEYBOARD || iWin == WINDOW_DIALOG_NUMERIC);
+    CGUIWindow *window = g_windowManager.GetWindow(iWin);
+    if (window)
+    {
+      CGUIControl *control = window->GetFocusedControl();
+      if (control)
+      {
+        // If this is an edit control set usekeyboard to true. This causes the
+        // keypress to be processed directly not through the key mappings.
+        if (control->GetControlType() == CGUIControl::GUICONTROL_EDIT)
+          useKeyboard = true;
+
+        // If the key pressed is shift-A to shift-Z set usekeyboard to true.
+        // This causes the keypress to be used for list navigation.
+        if (control->IsContainer() && key.GetModifiers() == CKey::MODIFIER_SHIFT && key.GetVKey() >= XBMCVK_A && key.GetVKey() <= XBMCVK_Z)
+          useKeyboard = true;
+      }
+    }
+    if (useKeyboard)
+    {
+      // use the virtualkeyboard section of the keymap, and send keyboard-specific or navigation
+      // actions through if that's what they are
+      CAction action = CButtonTranslator::GetInstance().GetAction(WINDOW_DIALOG_KEYBOARD, key);
+      if (!(action.GetID() == ACTION_MOVE_LEFT ||
+            action.GetID() == ACTION_MOVE_RIGHT ||
+            action.GetID() == ACTION_MOVE_UP ||
+            action.GetID() == ACTION_MOVE_DOWN ||
+            action.GetID() == ACTION_SELECT_ITEM ||
+            action.GetID() == ACTION_ENTER ||
+            action.GetID() == ACTION_PREVIOUS_MENU ||
+            action.GetID() == ACTION_NAV_BACK))
+      {
+        // the action isn't plain navigation - check for a keyboard-specific keymap
+        action = CButtonTranslator::GetInstance().GetAction(WINDOW_DIALOG_KEYBOARD, key, false);
+        if (!(action.GetID() >= REMOTE_0 && action.GetID() <= REMOTE_9) ||
+              action.GetID() == ACTION_BACKSPACE ||
+              action.GetID() == ACTION_SHIFT ||
+              action.GetID() == ACTION_SYMBOLS ||
+              action.GetID() == ACTION_CURSOR_LEFT ||
+              action.GetID() == ACTION_CURSOR_RIGHT)
+          action = CAction(0); // don't bother with this action
+      }
+      // else pass the keys through directly
+      if (!action.GetID())
+      {
+        if (key.GetFromService())
+          action = CAction(key.GetButtonCode() != KEY_INVALID ? key.GetButtonCode() : 0, key.GetUnicode());
+        else
+        {
+          // Check for paste keypress
+#ifdef TARGET_WINDOWS
+          // In Windows paste is ctrl-V
+          if (key.GetVKey() == XBMCVK_V && key.GetModifiers() == CKey::MODIFIER_CTRL)
+#elif defined(TARGET_LINUX)
+          // In Linux paste is ctrl-V
+          if (key.GetVKey() == XBMCVK_V && key.GetModifiers() == CKey::MODIFIER_CTRL)
+#elif defined(TARGET_DARWIN_OSX)
+          // In OSX paste is cmd-V
+          if (key.GetVKey() == XBMCVK_V && key.GetModifiers() == CKey::MODIFIER_META)
+#else
+          // Placeholder for other operating systems
+          if (false)
+#endif
+            action = CAction(ACTION_PASTE);
+          // If the unicode is non-zero the keypress is a non-printing character
+          else if (key.GetUnicode())
+            action = CAction(key.GetAscii() | KEY_ASCII, key.GetUnicode());
+          // The keypress is a non-printing character
+          else
+            action = CAction(key.GetVKey() | KEY_VKEY);
+        }
+      }
+
+      CLog::LogF(LOGDEBUG, "%s pressed, trying keyboard action %x", g_Keyboard.GetKeyName((int) key.GetButtonCode()).c_str(), action.GetID());
+
+      if (OnAction(action))
+        return true;
+      // failed to handle the keyboard action, drop down through to standard action
+    }
+    if (key.GetFromService())
+    {
+      if (key.GetButtonCode() != KEY_INVALID)
+        action = CButtonTranslator::GetInstance().GetAction(iWin, key);
+    }
+    else
+      action = CButtonTranslator::GetInstance().GetAction(iWin, key);
+  }
+  if (!key.IsAnalogButton())
+    CLog::LogF(LOGDEBUG, "%s pressed, action is %s", g_Keyboard.GetKeyName((int) key.GetButtonCode()).c_str(), action.GetName().c_str());
+
+  return ExecuteInputAction(action);
+}
 
 // OnAppCommand is called in response to a XBMC_APPCOMMAND event.
 // This needs to return true if it processed the appcommand or false if it didn't
@@ -2076,7 +2286,7 @@ bool CApplication::OnAction(const CAction &action)
   }
 
   if (action.IsMouse())
-    CInputManager::Get().SetMouseActive(true);
+    g_Mouse.SetActive(true);
 
   
   if (action.GetID() == ACTION_CREATE_EPISODE_BOOKMARK)   
@@ -2454,8 +2664,16 @@ void CApplication::FrameMove(bool processEvents, bool processGUI)
     }
     CWinEvents::MessagePump();
 
-    CInputManager::Get().Process(g_windowManager.GetActiveWindowID(), frameTime);
+#if defined(HAS_LIRC) || defined(HAS_IRSERVERSUITE)
+    // Read the input from a remote
+    g_RemoteControl.Update();
+#endif
 
+    // process input actions
+    CInputManager::GetInstance().ProcessRemote(g_windowManager.GetActiveWindowID());
+    CInputManager::GetInstance().ProcessGamepad(g_windowManager.GetActiveWindowID());
+    CInputManager::GetInstance().ProcessEventServer(g_windowManager.GetActiveWindowID(), frameTime);
+    CInputManager::GetInstance().ProcessPeripherals(frameTime);
     if (processGUI && m_renderGUI)
     {
       m_pInertialScrollingHandler->ProcessInertialScroll(frameTime);
@@ -2470,6 +2688,26 @@ void CApplication::FrameMove(bool processEvents, bool processGUI)
   }
 }
 
+bool CApplication::ExecuteInputAction(const CAction &action)
+{
+  bool bResult = false;
+
+  // play sound before the action unless the button is held,
+  // where we execute after the action as held actions aren't fired every time.
+  if(action.GetHoldTime())
+  {
+    bResult = OnAction(action);
+    if(bResult)
+      g_audioManager.PlayActionSound(action);
+  }
+  else
+  {
+    g_audioManager.PlayActionSound(action);
+    bResult = OnAction(action);
+  }
+  return bResult;
+}
+
 
 
 bool CApplication::Cleanup()
@@ -2480,8 +2718,10 @@ bool CApplication::Cleanup()
 
     CAddonMgr::Get().DeInit();
 
+#if defined(HAS_LIRC) || defined(HAS_IRSERVERSUITE)
     CLog::Log(LOGNOTICE, "closing down remote control service");
-    CInputManager::Get().DisableRemoteControl();
+    g_RemoteControl.Disconnect();
+#endif
 
     CLog::Log(LOGNOTICE, "unload sections");
 
@@ -2802,7 +3042,7 @@ PlayBackRet CApplication::PlayStack(const CFileItem& item, bool bRestart)
   // case 2: all other stacks
   else
   {
-    LoadVideoSettings(item);
+    LoadVideoSettings(item.GetPath());
     
     // see if we have the info in the database
     // TODO: If user changes the time speed (FPS via framerate conversion stuff)
@@ -2972,6 +3212,35 @@ PlayBackRet CApplication::PlayFile(const CFileItem& item, bool bRestart)
   if (item.IsStack())
     return PlayStack(item, bRestart);
 
+  //Is TuxBox, this should probably be moved to CTuxBoxFile
+  if(item.IsTuxBox())
+  {
+    CLog::LogF(LOGDEBUG, "TuxBox URL Detected %s",item.GetPath().c_str());
+
+    if(g_tuxboxService.IsRunning())
+      g_tuxboxService.Stop();
+
+    PlayBackRet ret = PLAYBACK_FAIL;
+    CFileItem item_new;
+    if(g_tuxbox.CreateNewItem(item, item_new))
+    {
+
+      // Make sure it doesn't have a player
+      // so we actually select one normally
+      m_pPlayer->ResetPlayer();
+
+      // keep the tuxbox:// url as playing url
+      // and give the new url to the player
+      ret = PlayFile(item_new, true);
+      if(ret == PLAYBACK_OK)
+      {
+        if(!g_tuxboxService.IsRunning())
+          g_tuxboxService.Start();
+      }
+    }
+    return ret;
+  }
+
   CPlayerOptions options;
 
   if( item.HasProperty("StartPercent") )
@@ -3000,7 +3269,7 @@ PlayBackRet CApplication::PlayFile(const CFileItem& item, bool bRestart)
   else
   {
     options.starttime = item.m_lStartOffset / 75.0;
-    LoadVideoSettings(item);
+    LoadVideoSettings(item.GetPath());
 
     if (item.IsVideo())
     {
@@ -3502,15 +3771,15 @@ void CApplication::UpdateFileState()
   }
 }
 
-void CApplication::LoadVideoSettings(const CFileItem& item)
+void CApplication::LoadVideoSettings(const std::string &path)
 {
   CVideoDatabase dbs;
   if (dbs.Open())
   {
-    CLog::Log(LOGDEBUG, "Loading settings for %s", item.GetPath().c_str());
+    CLog::Log(LOGDEBUG, "Loading settings for %s", path.c_str());
     
     // Load stored settings if they exist, otherwise use default
-    if (!dbs.GetVideoSettings(item, CMediaSettings::Get().GetCurrentVideoSettings()))
+    if (!dbs.GetVideoSettings(path, CMediaSettings::Get().GetCurrentVideoSettings()))
       CMediaSettings::Get().GetCurrentVideoSettings() = CMediaSettings::Get().GetDefaultVideoSettings();
     
     dbs.Close();
@@ -3617,10 +3886,6 @@ bool CApplication::WakeUpScreenSaverAndDPMS(bool bPowerOffKeyPressed /* = false 
     CVariant data(CVariant::VariantTypeObject);
     data["shuttingdown"] = bPowerOffKeyPressed;
     CAnnouncementManager::Get().Announce(GUI, "xbmc", "OnScreensaverDeactivated", data);
-#ifdef TARGET_ANDROID
-    // Screensaver deactivated -> acquire wake lock
-    CXBMCApp::EnableWakeLock(true);
-#endif
   }
 
   return result;
@@ -3763,18 +4028,11 @@ void CApplication::ActivateScreenSaver(bool forceType /*= false */)
         m_screenSaver.reset(new CScreenSaver(""));
     }
   }
-  if (m_screenSaver->ID() == "screensaver.xbmc.builtin.dim"
-      || m_screenSaver->ID() == "screensaver.xbmc.builtin.black")
-  {
-#ifdef TARGET_ANDROID
-    // Default screensaver activated -> release wake lock
-    CXBMCApp::EnableWakeLock(false);
-#endif
+  if (m_screenSaver->ID() == "screensaver.xbmc.builtin.dim" || m_screenSaver->ID().empty())
     return;
-  }
-  else if (m_screenSaver->ID().empty())
+  else if (m_screenSaver->ID() == "screensaver.xbmc.builtin.black")
     return;
-  else
+  else if (!m_screenSaver->ID().empty())
     g_windowManager.ActivateWindow(WINDOW_SCREENSAVER);
 }
 
@@ -4088,7 +4346,7 @@ bool CApplication::ExecuteXBMCAction(std::string actionStr)
 #ifdef HAS_PYTHON
     if (item.IsPythonScript())
     { // a python script
-      CScriptInvocationManager::Get().ExecuteAsync(item.GetPath());
+      CScriptInvocationManager::Get().Execute(item.GetPath());
     }
     else
 #endif
@@ -4146,7 +4404,7 @@ void CApplication::Process()
     std::string strAutoExecPy = CSpecialProtocol::TranslatePath("special://profile/autoexec.py");
 
     if (XFILE::CFile::Exists(strAutoExecPy))
-      CScriptInvocationManager::Get().ExecuteAsync(strAutoExecPy);
+      CScriptInvocationManager::Get().Execute(strAutoExecPy);
     else
       CLog::Log(LOGDEBUG, "no profile autoexec.py (%s) found, skipping", strAutoExecPy.c_str());
   }
@@ -4227,6 +4485,14 @@ void CApplication::ProcessSlow()
   // check for any idle curl connections
   g_curlInterface.CheckIdle();
 
+  // check for any idle myth sessions
+  CMythSession::CheckIdle();
+
+#ifdef HAS_FILESYSTEM_HTSP
+  // check for any idle htsp sessions
+  HTSP::CHTSPDirectorySession::CheckIdle();
+#endif
+
 #ifdef HAS_KARAOKE
   if ( m_pKaraokeMgr )
     m_pKaraokeMgr->ProcessSlow();
@@ -4257,11 +4523,20 @@ void CApplication::ProcessSlow()
   gNfsConnection.CheckIfIdle();
 #endif
 
+#ifdef HAS_FILESYSTEM_AFP
+  gAfpConnection.CheckIfIdle();
+#endif
+
 #ifdef HAS_FILESYSTEM_SFTP
   CSFTPSessionManager::ClearOutIdleSessions();
 #endif
 
   g_mediaManager.ProcessEvents();
+
+#ifdef HAS_LIRC
+  if (g_RemoteControl.IsInUse() && !g_RemoteControl.IsInitialized())
+    g_RemoteControl.Initialize();
+#endif
 
   if (!m_pPlayer->IsPlayingVideo() &&
       CSettings::Get().GetInt("general.addonupdates") != AUTO_UPDATES_NEVER)
@@ -4708,11 +4983,7 @@ void CApplication::StartVideoCleanup(bool userInitiated /* = true */)
   if (userInitiated)
     CVideoLibraryQueue::Get().CleanLibraryModal(paths);
   else
-<<<<<<< HEAD
     CVideoLibraryQueue::Get().CleanLibrary(paths, false);
-=======
-    CVideoLibraryQueue::Get().CleanLibrary(paths, true);
->>>>>>> upstream/master
 }
 
 void CApplication::StartVideoScan(const std::string &strDirectory, bool userInitiated /* = true */, bool scanAll /* = false */)
@@ -4834,6 +5105,33 @@ bool CApplication::ProcessAndStartPlaylist(const std::string& strPlayList, CPlay
   return false;
 }
 
+bool CApplication::AlwaysProcess(const CAction& action)
+{
+  // check if this button is mapped to a built-in function
+  if (!action.GetName().empty())
+  {
+    std::string builtInFunction;
+    vector<string> params;
+    CUtil::SplitExecFunction(action.GetName(), builtInFunction, params);
+    StringUtils::ToLower(builtInFunction);
+
+    // should this button be handled normally or just cancel the screensaver?
+    if (   builtInFunction == "powerdown"
+        || builtInFunction == "reboot"
+        || builtInFunction == "restart"
+        || builtInFunction == "restartapp"
+        || builtInFunction == "suspend"
+        || builtInFunction == "hibernate"
+        || builtInFunction == "quit"
+        || builtInFunction == "shutdown")
+    {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 bool CApplication::IsCurrentThread() const
 {
   return CThread::IsCurrentThread(m_threadID);
@@ -4859,22 +5157,23 @@ CPerformanceStats &CApplication::GetPerformanceStats()
 
 bool CApplication::SetLanguage(const std::string &strLanguage)
 {
-  // nothing to be done if the language hasn't changed
-  if (strLanguage == CSettings::Get().GetString("locale.language"))
-    return true;
+  std::string strPreviousLanguage = CSettings::Get().GetString("locale.language");
+  if (strLanguage != strPreviousLanguage)
+  {
+    std::string strLangInfoPath = StringUtils::Format("special://xbmc/language/%s/langinfo.xml", strLanguage.c_str());
+    if (!g_langInfo.Load(strLangInfoPath))
+      return false;
 
-  return CSettings::Get().SetString("locale.language", strLanguage);
-}
+    CSettings::Get().SetString("locale.language", strLanguage);
 
-bool CApplication::LoadLanguage(bool reload, bool& fallback)
-{
-  // load the configured langauge
-  if (!g_langInfo.SetLanguage(fallback, "", reload))
-    return false;
+    if (!g_localizeStrings.Load("special://xbmc/language/", strLanguage))
+      return false;
 
-  // set the proper audio and subtitle languages
-  g_langInfo.SetAudioLanguage(CSettings::Get().GetString("locale.audiolanguage"));
-  g_langInfo.SetSubtitleLanguage(CSettings::Get().GetString("locale.subtitlelanguage"));
+    // also tell our weather and skin to reload as these are localized
+    g_weatherManager.Refresh();
+    g_PVRManager.LocalizationChanged();
+    ReloadSkin();
+  }
 
   return true;
 }
@@ -4890,7 +5189,11 @@ void CApplication::CloseNetworkShares()
 #ifdef HAS_FILESYSTEM_NFS
   gNfsConnection.Deinit();
 #endif
-
+  
+#ifdef HAS_FILESYSTEM_AFP
+  gAfpConnection.Deinit();
+#endif
+  
 #ifdef HAS_FILESYSTEM_SFTP
   CSFTPSessionManager::DisconnectAllSessions();
 #endif

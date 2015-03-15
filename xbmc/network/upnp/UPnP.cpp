@@ -46,7 +46,7 @@
 #include "GUIInfoManager.h"
 #include "utils/TimeUtils.h"
 #include "video/VideoInfoTag.h"
-#include "input/Key.h"
+#include "guilib/Key.h"
 #include "Util.h"
 
 using namespace std;

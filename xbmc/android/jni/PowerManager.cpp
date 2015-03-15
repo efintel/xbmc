@@ -25,20 +25,18 @@
 using namespace jni;
 
 int CJNIPowerManager::FULL_WAKE_LOCK(0);
-int CJNIPowerManager::SCREEN_BRIGHT_WAKE_LOCK(0xa);
 
 void CJNIPowerManager::PopulateStaticFields()
 {
   jhclass clazz  = find_class("android/os/PowerManager");
   FULL_WAKE_LOCK = (get_static_field<int>(clazz, "FULL_WAKE_LOCK"));
-  SCREEN_BRIGHT_WAKE_LOCK = (get_static_field<int>(clazz, "SCREEN_BRIGHT_WAKE_LOCK"));
 }
 
-CJNIWakeLock CJNIPowerManager::newWakeLock(int levelAndFlags, const std::string &tag)
+CJNIWakeLock CJNIPowerManager::newWakeLock(const std::string &name)
 {
   return call_method<jhobject>(m_object,
     "newWakeLock", "(ILjava/lang/String;)Landroid/os/PowerManager$WakeLock;",
-    levelAndFlags, jcast<jhstring>(tag));
+    FULL_WAKE_LOCK, jcast<jhstring>(name));
 }
 
 void CJNIPowerManager::goToSleep(int64_t timestamp)

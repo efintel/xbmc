@@ -52,29 +52,35 @@ namespace PVR
      * @brief The amount of channels in this container.
      * @return The amount of channels in this container.
      */
-    size_t GetNumHiddenChannels() const { return m_iHiddenChannels; }
+    int GetNumHiddenChannels() const { return m_iHiddenChannels; }
+
+    /*!
+     * @brief Add a channel to this internal group.
+     * @param iChannelNumber The channel number to use for this channel or 0 to add it to the back.
+     */
+    bool InsertInGroup(CPVRChannel &channel, int iChannelNumber = 0);
 
     /*!
      * @brief Callback for add-ons to update a channel.
      * @param channel The updated channel.
-     * @return The new/updated channel.
+     * @return True if the channel has been updated succesfully, false otherwise.
      */
-    CPVRChannelPtr UpdateFromClient(const CPVRChannelPtr &channel, unsigned int iChannelNumber = 0);
+    void UpdateFromClient(const CPVRChannel &channel, unsigned int iChannelNumber = 0);
 
     /*!
      * @see CPVRChannelGroup::IsGroupMember
      */
-    bool IsGroupMember(const CPVRChannelPtr &channel) const;
+    bool IsGroupMember(const CPVRChannel &channel) const;
 
     /*!
      * @see CPVRChannelGroup::AddToGroup
      */
-    bool AddToGroup(const CPVRChannelPtr &channel, int iChannelNumber = 0);
+    bool AddToGroup(CPVRChannel &channel, int iChannelNumber = 0);
 
     /*!
      * @see CPVRChannelGroup::RemoveFromGroup
      */
-    bool RemoveFromGroup(const CPVRChannelPtr &channel);
+    bool RemoveFromGroup(const CPVRChannel &channel);
 
     /*!
      * @see CPVRChannelGroup::MoveChannel
@@ -97,6 +103,8 @@ namespace PVR
      * @return True if all tables were created successfully, false otherwise.
      */
     bool CreateChannelEpgs(bool bForce = false);
+
+    bool AddNewChannel(const CPVRChannel &channel, unsigned int iChannelNumber = 0) { UpdateFromClient(channel, iChannelNumber); return true; }
 
   protected:
     /*!
@@ -137,6 +145,11 @@ namespace PVR
     bool Update(void);
 
     /*!
+     * @brief Remove invalid channels and updates the channel numbers.
+     */
+    bool Renumber(void);
+
+    /*!
      * @brief Load the channels from the database.
      *
      * Load the channels from the database.
@@ -153,6 +166,6 @@ namespace PVR
 
     void CreateChannelEpg(CPVRChannelPtr channel, bool bForce = false);
 
-    size_t m_iHiddenChannels; /*!< the amount of hidden channels in this container */
+    int m_iHiddenChannels; /*!< the amount of hidden channels in this container */
   };
 }

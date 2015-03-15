@@ -30,7 +30,6 @@
 
 
 #include "StringUtils.h"
-#include "CharsetConverter.h"
 #include "utils/fstrcmp.h"
 #include "Util.h"
 #include "LangInfo.h"
@@ -373,30 +372,6 @@ void StringUtils::ToLower(string &str)
 void StringUtils::ToLower(wstring &str)
 {
   transform(str.begin(), str.end(), str.begin(), tolowerUnicode);
-}
-
-void StringUtils::ToCapitalize(string &str)
-{
-  std::wstring wstr;
-  g_charsetConverter.utf8ToW(str, wstr);
-  ToCapitalize(wstr);
-  g_charsetConverter.wToUTF8(wstr, str);
-}
-
-void StringUtils::ToCapitalize(std::wstring &str)
-{
-  const std::locale& loc = g_langInfo.GetSystemLocale();
-  bool isFirstLetter = true;
-  for (std::wstring::iterator it = str.begin(); it < str.end(); ++it)
-  {
-    if (std::isspace(*it, loc))
-      isFirstLetter = true;
-    else if (isFirstLetter)
-    {
-      *it = std::toupper(*it, loc);
-      isFirstLetter = false;
-    }
-  }
 }
 
 bool StringUtils::EqualsNoCase(const std::string &str1, const std::string &str2)
@@ -766,11 +741,7 @@ int64_t StringUtils::AlphaNumericCompare(const wchar_t *left, const wchar_t *rig
   wchar_t *ld, *rd;
   wchar_t lc, rc;
   int64_t lnum, rnum;
-<<<<<<< HEAD
   const collate<wchar_t>& coll = use_facet< collate<wchar_t> >( g_langInfo.GetLocale() );
-=======
-  const collate<wchar_t>& coll = use_facet< collate<wchar_t> >(g_langInfo.GetSystemLocale());
->>>>>>> upstream/master
   int cmp_res = 0;
   while (*l != 0 && *r != 0)
   {

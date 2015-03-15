@@ -55,9 +55,8 @@ Database::~Database() {
   disconnect();		// Disconnect if connected to database
 }
 
-int Database::connectFull(const char *newHost, const char *newPort, const char *newDb, const char *newLogin,
-                          const char *newPasswd, const char *newKey, const char *newCert, const char *newCA,
-                          const char *newCApath, const char *newCiphers, bool newCompression) {
+int Database::connectFull(const char *newHost, const char *newPort, const char *newDb, const char *newLogin, const char *newPasswd,
+                        const char *newKey, const char *newCert, const char *newCA, const char *newCApath, const char *newCiphers) {
   host = newHost;
   port = newPort;
   db = newDb;
@@ -68,7 +67,6 @@ int Database::connectFull(const char *newHost, const char *newPort, const char *
   ca = newCA;
   capath = newCApath;
   ciphers = newCiphers;
-  compression = newCompression;
   return connect(true);
 }
 

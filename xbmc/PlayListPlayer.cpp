@@ -35,7 +35,7 @@
 #include "dialogs/GUIDialogKaiToast.h"
 #include "guilib/LocalizeStrings.h"
 #include "interfaces/AnnouncementManager.h"
-#include "input/Key.h"
+#include "guilib/Key.h"
 #include "URL.h"
 
 using namespace PLAYLIST;

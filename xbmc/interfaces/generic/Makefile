@@ -1,5 +1,4 @@
-SRCS=ILanguageInvoker.cpp \
-     LanguageInvokerThread.cpp \
+SRCS=LanguageInvokerThread.cpp \
      ScriptInvocationManager.cpp \
 
 LIB=interfaces-generic.a

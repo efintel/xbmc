@@ -275,17 +275,9 @@ public:
   virtual int GetChapter() { return 0; }
 
   /*
-   * Get the name of a chapter
-   * \param strChapterName[out] Name of chapter
-   * \param chapterIdx -1 for current chapter, else a chapter index
+   * Get the name of the current chapter
    */
-  virtual void GetChapterName(std::string& strChapterName, int chapterIdx=-1) {}
-
-  /*
-   * Get the position of a chapter
-   * \param chapterIdx -1 for current chapter, else a chapter index
-   */
-  virtual int64_t GetChapterPos(int chapterIdx=-1) { return 0; }
+  virtual void GetChapterName(std::string& strChapterName) {}
 
   /*
    * Set the playspeed, if demuxer can handle different

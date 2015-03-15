@@ -36,7 +36,7 @@ public:
   // Extract a thumbnail immage from the media at strPath, optionally populating a streamdetails class with the data
   static bool ExtractThumb(const std::string &strPath,
                            CTextureDetails &details,
-                           CStreamDetails *pStreamDetails, int pos=-1);
+                           CStreamDetails *pStreamDetails);
 
   // Probe the files streams and store the info in the VideoInfoTag
   static bool GetFileStreamDetails(CFileItem *pItem);

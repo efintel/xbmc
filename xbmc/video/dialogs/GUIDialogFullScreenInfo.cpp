@@ -19,7 +19,7 @@
  */
 
 #include "GUIDialogFullScreenInfo.h"
-#include "input/Key.h"
+#include "guilib/Key.h"
 
 CGUIDialogFullScreenInfo::CGUIDialogFullScreenInfo(void)
     : CGUIDialog(WINDOW_DIALOG_FULLSCREEN_INFO, "DialogFullScreenInfo.xml")

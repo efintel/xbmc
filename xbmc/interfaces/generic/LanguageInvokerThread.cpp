@@ -21,7 +21,7 @@
 #include "LanguageInvokerThread.h"
 #include "ScriptInvocationManager.h"
 
-CLanguageInvokerThread::CLanguageInvokerThread(LanguageInvokerPtr invoker, CScriptInvocationManager *invocationManager)
+CLanguageInvokerThread::CLanguageInvokerThread(ILanguageInvoker *invoker, CScriptInvocationManager *invocationManager)
   : ILanguageInvoker(NULL),
     CThread("LanguageInvoker"),
     m_invoker(invoker),
@@ -31,6 +31,7 @@ CLanguageInvokerThread::CLanguageInvokerThread(LanguageInvokerPtr invoker, CScri
 CLanguageInvokerThread::~CLanguageInvokerThread()
 {
   Stop(true);
+  delete m_invoker;
 }
 
 InvokerState CLanguageInvokerThread::GetState()

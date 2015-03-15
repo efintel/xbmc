@@ -54,4 +54,5 @@ protected:
   std::string m_strLinePrev;
   std::string m_strLinePrev2;
   bool bSentCancel;
+  bool m_bOpenTried;
 };

@@ -23,7 +23,7 @@
 #include "guilib/GUIWindowManager.h"
 #include "peripherals/Peripherals.h"
 #include "FileItem.h"
-#include "input/Key.h"
+#include "guilib/Key.h"
 #include "utils/log.h"
 
 #define BUTTON_CLOSE     10

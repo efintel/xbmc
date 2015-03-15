@@ -32,7 +32,7 @@ public:
   virtual IHTTPRequestHandler* Create(const HTTPRequest &request) { return new CHTTPVfsHandler(request); }
   virtual bool CanHandleRequest(const HTTPRequest &request);
 
-  virtual int GetPriority() const { return 5; }
+  virtual int GetPriority() const { return 2; }
 
 protected:
   explicit CHTTPVfsHandler(const HTTPRequest &request);

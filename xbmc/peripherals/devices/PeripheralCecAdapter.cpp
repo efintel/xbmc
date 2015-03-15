@@ -27,9 +27,8 @@
 #include "DynamicDll.h"
 #include "threads/SingleLock.h"
 #include "dialogs/GUIDialogKaiToast.h"
-#include "dialogs/GUIDialogYesNo.h"
 #include "guilib/GUIWindowManager.h"
-#include "input/Key.h"
+#include "guilib/Key.h"
 #include "guilib/LocalizeStrings.h"
 #include "peripherals/Peripherals.h"
 #include "peripherals/bus/PeripheralBus.h"
@@ -57,8 +56,6 @@ using namespace std;
 #define LOCALISED_ID_AVR          36038
 #define LOCALISED_ID_TV_AVR       36039
 #define LOCALISED_ID_NONE         231
-
-#define CEC_TV_PRESENT_CHECK_TIMEOUT (30)
 
 /* time in seconds to suppress source activation after receiving OnStop */
 #define CEC_SUPPRESS_ACTIVATE_SOURCE_AFTER_ON_STOP 2
@@ -360,7 +357,6 @@ bool CPeripheralCecAdapter::OpenConnection(void)
 
 void CPeripheralCecAdapter::Process(void)
 {
-  CStopWatch timeout;
   if (!OpenConnection())
     return;
 
@@ -376,7 +372,6 @@ void CPeripheralCecAdapter::Process(void)
 
   m_queryThread = new CPeripheralCecAdapterUpdateThread(this, &m_configuration);
   m_queryThread->Create(false);
-  timeout.Start();
 
   while (!m_bStop)
   {
@@ -388,34 +383,6 @@ void CPeripheralCecAdapter::Process(void)
 
     if (!m_bStop)
       ProcessStandbyDevices();
-
-    if (!m_bStop && timeout.IsRunning())
-    {
-      if (m_cecAdapter->IsActiveDeviceType(CEC_DEVICE_TYPE_TV))
-      {
-        /** TV is present, stop checking */
-        timeout.Stop();
-      }
-      else if (timeout.GetElapsedSeconds() >= CEC_TV_PRESENT_CHECK_TIMEOUT)
-      {
-        /** no TV found for 30 seconds, ask if the user wants to disable CEC */
-        if (!CGUIDialogYesNo::ShowAndGetInput(g_localizeStrings.Get(36000), // Pulse-Eight CEC adaptor
-                                              g_localizeStrings.Get(36043), // No CEC capable TV detected.
-                                              "",
-                                              g_localizeStrings.Get(36044) // Disable polling for CEC capable devices?
-                                              ))
-        {
-          SetSetting("enabled", false);
-          m_bStop          = true;
-          m_bDeviceRemoved = true;
-        }
-        else
-        {
-          /** stop checking in here */
-          timeout.Stop();
-        }
-      }
-    }
 
     if (!m_bStop)
       Sleep(5);
@@ -590,49 +557,49 @@ void CPeripheralCecAdapter::SetMenuLanguage(const char *strLanguage)
   std::string strGuiLanguage;
 
   if (!strcmp(strLanguage, "bul"))
-    strGuiLanguage = "bg_bg";
+    strGuiLanguage = "Bulgarian";
   else if (!strcmp(strLanguage, "hrv"))
-    strGuiLanguage = "hr_hr";
+    strGuiLanguage = "Croatian";
   else if (!strcmp(strLanguage, "cze"))
-    strGuiLanguage = "cs_cz";
+    strGuiLanguage = "Czech";
   else if (!strcmp(strLanguage, "dan"))
-    strGuiLanguage = "da_dk";
+    strGuiLanguage = "Danish";
   else if (!strcmp(strLanguage, "dut"))
-    strGuiLanguage = "nl_nl";
+    strGuiLanguage = "Dutch";
   else if (!strcmp(strLanguage, "eng"))
-    strGuiLanguage = "en_gb";
+    strGuiLanguage = "English";
   else if (!strcmp(strLanguage, "fin"))
-    strGuiLanguage = "fi_fi";
+    strGuiLanguage = "Finnish";
   else if (!strcmp(strLanguage, "fre"))
-    strGuiLanguage = "fr_fr";
+    strGuiLanguage = "French";
   else if (!strcmp(strLanguage, "ger"))
-    strGuiLanguage = "de_de";
+    strGuiLanguage = "German";
   else if (!strcmp(strLanguage, "gre"))
-    strGuiLanguage = "el_gr";
+    strGuiLanguage = "Greek";
   else if (!strcmp(strLanguage, "hun"))
-    strGuiLanguage = "hu_hu";
+    strGuiLanguage = "Hungarian";
   else if (!strcmp(strLanguage, "ita"))
-    strGuiLanguage = "it_it";
+    strGuiLanguage = "Italian";
   else if (!strcmp(strLanguage, "nor"))
-    strGuiLanguage = "nb_no";
+    strGuiLanguage = "Norwegian";
   else if (!strcmp(strLanguage, "pol"))
-    strGuiLanguage = "pl_pl";
+    strGuiLanguage = "Polish";
   else if (!strcmp(strLanguage, "por"))
-    strGuiLanguage = "pt_pt";
+    strGuiLanguage = "Portuguese";
   else if (!strcmp(strLanguage, "rum"))
-    strGuiLanguage = "ro_ro";
+    strGuiLanguage = "Romanian";
   else if (!strcmp(strLanguage, "rus"))
-    strGuiLanguage = "ru_ru";
+    strGuiLanguage = "Russian";
   else if (!strcmp(strLanguage, "srp"))
-    strGuiLanguage = "sr_rs@latin";
+    strGuiLanguage = "Serbian";
   else if (!strcmp(strLanguage, "slo"))
-    strGuiLanguage = "sl_si";
+    strGuiLanguage = "Slovenian";
   else if (!strcmp(strLanguage, "spa"))
-    strGuiLanguage = "es_es";
+    strGuiLanguage = "Spanish";
   else if (!strcmp(strLanguage, "swe"))
-    strGuiLanguage = "sv_se";
+    strGuiLanguage = "Swedish";
   else if (!strcmp(strLanguage, "tur"))
-    strGuiLanguage = "tr_tr";
+    strGuiLanguage = "Turkish";
 
   if (!strGuiLanguage.empty())
   {
@@ -1315,7 +1282,7 @@ void CPeripheralCecAdapter::SetConfigurationFromLibCEC(const CEC::libcec_configu
              m_configuration.bShutdownOnStandby == 1 ? 13005 : 36028);
 
   if (bChanged)
-    CLog::Log(LOGDEBUG, "SetConfigurationFromLibCEC - settings updated by libCEC");
+    CGUIDialogKaiToast::QueueNotification(CGUIDialogKaiToast::Info, g_localizeStrings.Get(36000), g_localizeStrings.Get(36023));
 }
 
 void CPeripheralCecAdapter::SetConfigurationFromSettings(void)
@@ -1365,7 +1332,7 @@ void CPeripheralCecAdapter::SetConfigurationFromSettings(void)
 
   // set the tv vendor override
   int iVendor = GetSettingInt("tv_vendor");
-  if (iVendor >= CEC_MIN_VENDORID &&
+  if (iVendor >= CEC_MAX_VENDORID &&
       iVendor <= CEC_MAX_VENDORID)
     m_configuration.tvVendor = iVendor;
 

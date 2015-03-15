@@ -30,7 +30,7 @@
 #include "utils/TimeUtils.h"
 #include "utils/StringUtils.h"
 #include "guilib/GUIWindowManager.h"
-#include "input/Key.h"
+#include "guilib/Key.h"
 #include "guilib/TextureManager.h"
 #include "guilib/GUISpinControlEx.h"
 #include "guilib/GUIRadioButtonControl.h"
@@ -1723,17 +1723,10 @@ bool CAddonCallbacksGUI::Dialog_Keyboard_ShowAndVerifyNewPassword(char &strNewPa
 int CAddonCallbacksGUI::Dialog_Keyboard_ShowAndVerifyPassword(char &strPassword, unsigned int iMaxStringSize, const char *strHeading, int iRetries, unsigned int autoCloseMs)
 {
   std::string str = &strPassword;
-<<<<<<< HEAD
   int bRet = CGUIKeyboardFactory::ShowAndVerifyNewPassword(str, strHeading, iRetries, autoCloseMs);
   if (bRet)
     strncpy(&strPassword, str.c_str(), iMaxStringSize);
   return bRet;
-=======
-  int iRet = CGUIKeyboardFactory::ShowAndVerifyPassword(str, strHeading, iRetries, autoCloseMs);
-  if (iRet)
-    strncpy(&strPassword, str.c_str(), iMaxStringSize);
-  return iRet;
->>>>>>> upstream/master
 }
 
 bool CAddonCallbacksGUI::Dialog_Keyboard_ShowAndGetFilter(char &aTextString, unsigned int iMaxStringSize, bool searching, unsigned int autoCloseMs)
@@ -1784,7 +1777,6 @@ bool CAddonCallbacksGUI::Dialog_Numeric_ShowAndVerifyInput(char &strPassword, un
     strncpy(&strPassword, str.c_str(), iMaxStringSize);
   return bRet;
 }
-<<<<<<< HEAD
 
 bool CAddonCallbacksGUI::Dialog_Numeric_ShowAndGetTime(tm &time, const char *strHeading)
 {
@@ -1879,102 +1871,6 @@ bool CAddonCallbacksGUI::Dialog_YesNo_ShowAndGetInputLineText(const char *headin
   return CGUIDialogYesNo::ShowAndGetInput(heading, line0, line1, line2, noLabel, yesLabel);
 }
 
-=======
-
-bool CAddonCallbacksGUI::Dialog_Numeric_ShowAndGetTime(tm &time, const char *strHeading)
-{
-  SYSTEMTIME systemTime;
-  CDateTime dateTime(time);
-  dateTime.GetAsSystemTime(systemTime);
-  if (CGUIDialogNumeric::ShowAndGetTime(systemTime, strHeading))
-  {
-    dateTime = systemTime;
-    dateTime.GetAsTm(time);
-    return true;
-  }
-  return false;
-}
-
-bool CAddonCallbacksGUI::Dialog_Numeric_ShowAndGetDate(tm &date, const char *strHeading)
-{
-  SYSTEMTIME systemTime;
-  CDateTime dateTime(date);
-  dateTime.GetAsSystemTime(systemTime);
-  if (CGUIDialogNumeric::ShowAndGetDate(systemTime, strHeading))
-  {
-    dateTime = systemTime;
-    dateTime.GetAsTm(date);
-    return true;
-  }
-  return false;
-}
-
-bool CAddonCallbacksGUI::Dialog_Numeric_ShowAndGetIPAddress(char &strIPAddress, unsigned int iMaxStringSize, const char *strHeading)
-{
-  std::string strIP = &strIPAddress;
-  bool bRet = CGUIDialogNumeric::ShowAndGetIPAddress(strIP, strHeading);
-  if (bRet)
-    strncpy(&strIPAddress, strIP.c_str(), iMaxStringSize);
-  return bRet;
-}
-
-bool CAddonCallbacksGUI::Dialog_Numeric_ShowAndGetNumber(char &strInput, unsigned int iMaxStringSize, const char *strHeading, unsigned int iAutoCloseTimeoutMs)
-{
-  std::string str = &strInput;
-  bool bRet = CGUIDialogNumeric::ShowAndGetNumber(str, strHeading, iAutoCloseTimeoutMs);
-  if (bRet)
-    strncpy(&strInput, str.c_str(), iMaxStringSize);
-  return bRet;
-}
-
-bool CAddonCallbacksGUI::Dialog_Numeric_ShowAndGetSeconds(char &timeString, unsigned int iMaxStringSize, const char *strHeading)
-{
-  std::string str = &timeString;
-  bool bRet = CGUIDialogNumeric::ShowAndGetSeconds(str, strHeading);
-  if (bRet)
-    strncpy(&timeString, str.c_str(), iMaxStringSize);
-  return bRet;
-}
-//@}
-
-/*! @name GUI File browser functions */
-//@{
-bool CAddonCallbacksGUI::Dialog_FileBrowser_ShowAndGetFile(const char *directory, const char *mask, const char *heading, char &path, unsigned int iMaxStringSize, bool useThumbs, bool useFileDirectories, bool singleList)
-{
-  std::string strPath = &path;
-  bool bRet = CGUIDialogFileBrowser::ShowAndGetFile(directory, mask, heading, strPath, useThumbs, useFileDirectories, singleList);
-  if (bRet)
-    strncpy(&path, strPath.c_str(), iMaxStringSize);
-  return bRet;
-}
-//@}
-
-/*! @name GUI OK Dialog */
-//@{
-void CAddonCallbacksGUI::Dialog_OK_ShowAndGetInputSingleText(const char *heading, const char *text)
-{
-  CGUIDialogOK::ShowAndGetInput(heading, text);
-}
-
-void CAddonCallbacksGUI::Dialog_OK_ShowAndGetInputLineText(const char *heading, const char *line0, const char *line1, const char *line2)
-{
-  CGUIDialogOK::ShowAndGetInput(heading, line0, line1, line2);
-}
-//@}
-
-/*! @name GUI Yes No Dialog */
-//@{
-bool CAddonCallbacksGUI::Dialog_YesNo_ShowAndGetInputSingleText(const char *heading, const char *text, bool& bCanceled, const char *noLabel, const char *yesLabel)
-{
-  return CGUIDialogYesNo::ShowAndGetInput(heading, text, bCanceled, noLabel, yesLabel);
-}
-
-bool CAddonCallbacksGUI::Dialog_YesNo_ShowAndGetInputLineText(const char *heading, const char *line0, const char *line1, const char *line2, const char *noLabel, const char *yesLabel)
-{
-  return CGUIDialogYesNo::ShowAndGetInput(heading, line0, line1, line2, noLabel, yesLabel);
-}
-
->>>>>>> upstream/master
 bool CAddonCallbacksGUI::Dialog_YesNo_ShowAndGetInputLineButtonText(const char *heading, const char *line0, const char *line1, const char *line2, bool &bCanceled, const char *noLabel, const char *yesLabel)
 {
   return CGUIDialogYesNo::ShowAndGetInput(heading, line0, line1, line2, bCanceled, noLabel, yesLabel);
@@ -2013,20 +1909,18 @@ int CAddonCallbacksGUI::Dialog_Select(const char *heading, const char *entries[]
 
 CGUIAddonWindow::CGUIAddonWindow(int id, const std::string& strXML, CAddon* addon)
  : CGUIMediaWindow(id, strXML.c_str())
- , CBOnInit{nullptr}
- , CBOnFocus{nullptr}
- , CBOnClick{nullptr}
- , CBOnAction{nullptr}
- , m_clientHandle{nullptr}
  , m_iWindowId(id)
  , m_iOldWindowId(0)
  , m_bModal(false)
  , m_bIsDialog(false)
  , m_actionEvent(true)
  , m_addon(addon)
-
 {
   m_loadType = LOAD_ON_GUI_INIT;
+  CBOnInit        = NULL;
+  CBOnFocus       = NULL;
+  CBOnClick       = NULL;
+  CBOnAction      = NULL;
 }
 
 CGUIAddonWindow::~CGUIAddonWindow(void)
@@ -2328,14 +2222,10 @@ void CGUIAddonWindowDialog::Show_Internal(bool show /* = true */)
 }
 
 CGUIAddonRenderingControl::CGUIAddonRenderingControl(CGUIRenderingControl *pControl)
-  : CBCreate{nullptr},
-  CBRender{nullptr},
-  CBStop{nullptr},
-  CBDirty{nullptr},
-  m_clientHandle{nullptr},
-  m_pControl{pControl},
-  m_refCount{1}
-{ }
+{
+  m_pControl = pControl;
+  m_refCount = 1;
+}
 
 bool CGUIAddonRenderingControl::Create(int x, int y, int w, int h, void *device)
 {

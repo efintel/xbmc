@@ -37,11 +37,8 @@
 // but this allows for double/redundant or ambiguous mapping definition, e.g.
 // ASCII/unicode could be derived from scancodes, virtual keys, modifiers and/or other ASCII/unicode.
 
-#include <string>
-
 #include "windowing/XBMC_events.h"
-#include "input/Key.h"
-#include "input/XBMC_keyboard.h"
+#include "guilib/Key.h"
 
 class CKeyboardStat
 {
@@ -62,5 +59,7 @@ private:
   XBMC_keysym m_lastKeysym;
   unsigned int m_lastKeyTime;
 };
+
+extern CKeyboardStat g_Keyboard;
 
 #endif

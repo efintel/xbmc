@@ -46,7 +46,7 @@
 #include "GUIUserMessages.h"
 #include "utils/StringUtils.h"
 #include "Util.h"
-#include "input/Key.h"
+#include "guilib/Key.h"
 #include "settings/lib/Setting.h"
 
 using namespace PERIPHERALS;

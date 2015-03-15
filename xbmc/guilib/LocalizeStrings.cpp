@@ -20,7 +20,6 @@
 
 #include "system.h"
 #include "LocalizeStrings.h"
-#include "addons/LanguageResource.h"
 #include "utils/CharsetConverter.h"
 #include "utils/log.h"
 #include "filesystem/SpecialProtocol.h"
@@ -64,13 +63,13 @@ bool CLocalizeStrings::LoadSkinStrings(const std::string& path, const std::strin
   std::string encoding;
   if (!LoadStr2Mem(path, language, encoding))
   {
-    if (StringUtils::EqualsNoCase(language, ADDON_LANGUAGE_DEFAULT)) // no fallback, nothing to do
+    if (StringUtils::EqualsNoCase(language, SOURCE_LANGUAGE)) // no fallback, nothing to do
       return false;
   }
 
   // load the fallback
-  if (!StringUtils::EqualsNoCase(language, ADDON_LANGUAGE_DEFAULT))
-    LoadStr2Mem(path, ADDON_LANGUAGE_DEFAULT, encoding);
+  if (!StringUtils::EqualsNoCase(language, SOURCE_LANGUAGE))
+    LoadStr2Mem(path, SOURCE_LANGUAGE, encoding);
 
   return true;
 }
@@ -81,26 +80,14 @@ bool CLocalizeStrings::LoadStr2Mem(const std::string &pathname_in, const std::st
   std::string pathname = CSpecialProtocol::TranslatePathConvertCase(pathname_in + language);
   if (!XFILE::CDirectory::Exists(pathname))
   {
-    bool exists = false;
-    std::string lang;
-    // check if there's a language addon using the old language naming convention
-    if (ADDON::CLanguageResource::FindLegacyLanguage(language, lang))
-    {
-      pathname = CSpecialProtocol::TranslatePathConvertCase(pathname_in + lang);
-      exists = XFILE::CDirectory::Exists(pathname);
-    }
-
-    if (!exists)
-    {
-      CLog::Log(LOGDEBUG,
-                "LocalizeStrings: no translation available in currently set gui language, at path %s",
-                pathname.c_str());
-      return false;
-    }
+    CLog::Log(LOGDEBUG,
+              "LocalizeStrings: no translation available in currently set gui language, at path %s",
+              pathname.c_str());
+    return false;
   }
 
   if (LoadPO(URIUtils::AddFileToFolder(pathname, "strings.po"), encoding, offset,
-             StringUtils::EqualsNoCase(language, CORE_LANGUAGE_DEFAULT) || StringUtils::EqualsNoCase(language, ADDON_LANGUAGE_DEFAULT)))
+             StringUtils::EqualsNoCase(language, SOURCE_LANGUAGE)))
     return true;
 
   CLog::Log(LOGDEBUG, "LocalizeStrings: no strings.po file exist at %s, fallback to strings.xml",
@@ -198,7 +185,7 @@ bool CLocalizeStrings::LoadXML(const std::string &filename, std::string &encodin
 
 bool CLocalizeStrings::Load(const std::string& strPathName, const std::string& strLanguage)
 {
-  bool bLoadFallback = !StringUtils::EqualsNoCase(strLanguage, CORE_LANGUAGE_DEFAULT);
+  bool bLoadFallback = !StringUtils::EqualsNoCase(strLanguage, SOURCE_LANGUAGE);
 
   std::string encoding;
   CSingleLock lock(m_critSection);
@@ -207,14 +194,14 @@ bool CLocalizeStrings::Load(const std::string& strPathName, const std::string& s
   if (!LoadStr2Mem(strPathName, strLanguage, encoding))
   {
     // try loading the fallback
-    if (!bLoadFallback || !LoadStr2Mem(strPathName, CORE_LANGUAGE_DEFAULT, encoding))
+    if (!bLoadFallback || !LoadStr2Mem(strPathName, SOURCE_LANGUAGE, encoding))
       return false;
 
     bLoadFallback = false;
   }
 
   if (bLoadFallback)
-    LoadStr2Mem(strPathName, CORE_LANGUAGE_DEFAULT, encoding);
+    LoadStr2Mem(strPathName, SOURCE_LANGUAGE, encoding);
 
   // fill in the constant strings
   m_strings[20022].strTranslated = "";

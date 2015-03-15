@@ -32,11 +32,7 @@
 using namespace std;
 
 CVideoLibraryQueue::CVideoLibraryQueue()
-<<<<<<< HEAD
   : CJobQueue(false, 1, CJob::PRIORITY_LOW_PAUSABLE),
-=======
-  : CJobQueue(false, 1, CJob::PRIORITY_LOW),
->>>>>>> upstream/master
     m_jobs(),
     m_cleaning(false)
 { }
@@ -90,10 +86,6 @@ void CVideoLibraryQueue::StopLibraryScanning()
   // cancel all scanning jobs
   for (VideoLibraryJobs::const_iterator job = tmpScanningJobs.begin(); job != tmpScanningJobs.end(); ++job)
     CancelJob(*job);
-<<<<<<< HEAD
-=======
-  Refresh();
->>>>>>> upstream/master
 }
 
 void CVideoLibraryQueue::CleanLibrary(const std::set<int>& paths /* = std::set<int>() */, bool asynchronous /* = true */, CGUIDialogProgressBarHandle* progressBar /* = NULL */)
@@ -109,10 +101,6 @@ void CVideoLibraryQueue::CleanLibrary(const std::set<int>& paths /* = std::set<i
 
     delete cleaningJob;
     m_cleaning = false;
-<<<<<<< HEAD
-=======
-    Refresh();
->>>>>>> upstream/master
   }
 }
 
@@ -126,10 +114,6 @@ void CVideoLibraryQueue::CleanLibraryModal(const std::set<int>& paths /* = std::
   CVideoLibraryCleaningJob cleaningJob(paths, true);
   cleaningJob.DoWork();
   m_cleaning = false;
-<<<<<<< HEAD
-=======
-  Refresh();
->>>>>>> upstream/master
 }
 
 void CVideoLibraryQueue::MarkAsWatched(const CFileItemPtr &item, bool watched)
@@ -168,7 +152,6 @@ void CVideoLibraryQueue::CancelJob(CVideoLibraryJob *job)
     return;
 
   CSingleLock lock(m_critical);
-<<<<<<< HEAD
   if (job->CanBeCancelled())
     job->Cancel();
 
@@ -176,23 +159,6 @@ void CVideoLibraryQueue::CancelJob(CVideoLibraryJob *job)
 
   // remove the job from our list of queued/running jobs
   VideoLibraryJobMap::iterator jobsIt = m_jobs.find(job->GetType());
-=======
-  // remember the job type needed later because the job might be deleted
-  // in the call to CJobQueue::CancelJob()
-  std::string jobType;
-  if (job->GetType() != NULL)
-    jobType = job->GetType();
-
-  // check if the job supports cancellation and cancel it
-  if (job->CanBeCancelled())
-    job->Cancel();
-
-  // remove the job from the job queue
-  CJobQueue::CancelJob(job);
-
-  // remove the job from our list of queued/running jobs
-  VideoLibraryJobMap::iterator jobsIt = m_jobs.find(jobType);
->>>>>>> upstream/master
   if (jobsIt != m_jobs.end())
     jobsIt->second.erase(job);
 }
@@ -211,30 +177,16 @@ bool CVideoLibraryQueue::IsRunning() const
   return CJobQueue::IsProcessing() || m_cleaning;
 }
 
-<<<<<<< HEAD
-=======
-void CVideoLibraryQueue::Refresh()
-{
-  CUtil::DeleteVideoDatabaseDirectoryCache();
-  CGUIMessage msg(GUI_MSG_NOTIFY_ALL, 0, 0, GUI_MSG_UPDATE);
-  g_windowManager.SendThreadMessage(msg);
-}
-
->>>>>>> upstream/master
 void CVideoLibraryQueue::OnJobComplete(unsigned int jobID, bool success, CJob *job)
 {
   if (success)
   {
     if (QueueEmpty())
-<<<<<<< HEAD
     {
       CUtil::DeleteVideoDatabaseDirectoryCache();
       CGUIMessage msg(GUI_MSG_NOTIFY_ALL, 0, 0, GUI_MSG_UPDATE);
       g_windowManager.SendThreadMessage(msg);
     }
-=======
-      Refresh();
->>>>>>> upstream/master
   }
 
   {

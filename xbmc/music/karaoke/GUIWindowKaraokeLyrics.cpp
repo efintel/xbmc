@@ -20,7 +20,7 @@
 
 #include "Application.h"
 #include "guilib/GUIWindowManager.h"
-#include "input/Key.h"
+#include "guilib/Key.h"
 #include "settings/AdvancedSettings.h"
 
 #include "GUIDialogKaraokeSongSelector.h"

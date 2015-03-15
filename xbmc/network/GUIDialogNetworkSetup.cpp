@@ -118,6 +118,12 @@ void CGUIDialogNetworkSetup::OnInitWindow()
 #ifdef HAS_FILESYSTEM_SMB
   labels.push_back(make_pair(g_localizeStrings.Get(20171), NET_PROTOCOL_SMB));
 #endif
+  labels.push_back(make_pair(g_localizeStrings.Get(20256), NET_PROTOCOL_HTSP));
+  labels.push_back(make_pair(g_localizeStrings.Get(20257), NET_PROTOCOL_VTP));
+#ifdef HAS_MYSQL
+  labels.push_back(make_pair(g_localizeStrings.Get(20258), NET_PROTOCOL_MYTH));
+#endif
+  labels.push_back(make_pair(g_localizeStrings.Get(21331), NET_PROTOCOL_TUXBOX));
   labels.push_back(make_pair(g_localizeStrings.Get(20301), NET_PROTOCOL_HTTPS));
   labels.push_back(make_pair(g_localizeStrings.Get(20300), NET_PROTOCOL_HTTP));
   labels.push_back(make_pair(g_localizeStrings.Get(20254), NET_PROTOCOL_DAVS));
@@ -131,6 +137,9 @@ void CGUIDialogNetworkSetup::OnInitWindow()
 #endif
 #ifdef HAS_FILESYSTEM_SFTP
   labels.push_back(make_pair(g_localizeStrings.Get(20260), NET_PROTOCOL_SFTP));
+#endif
+#ifdef HAS_FILESYSTEM_AFP
+  labels.push_back(make_pair(g_localizeStrings.Get(20261), NET_PROTOCOL_AFP));
 #endif
 
   SET_CONTROL_LABELS(CONTROL_PROTOCOL, m_protocol, &labels);
@@ -192,12 +201,19 @@ void CGUIDialogNetworkSetup::OnProtocolChange()
     m_port = "21";
   else if (m_protocol == NET_PROTOCOL_HTTP || 
 	   m_protocol == NET_PROTOCOL_RSS || 
+	   m_protocol == NET_PROTOCOL_TUXBOX || 
 	   m_protocol == NET_PROTOCOL_DAV)
     m_port = "80";
   else if (m_protocol == NET_PROTOCOL_HTTPS || m_protocol == NET_PROTOCOL_DAVS)
     m_port = "443";
   else if (m_protocol == NET_PROTOCOL_DAAP)
     m_port = "3689";
+  else if (m_protocol == NET_PROTOCOL_HTSP)
+    m_port = "9982";
+  else if (m_protocol == NET_PROTOCOL_VTP)
+    m_port = "2004";
+  else if (m_protocol == NET_PROTOCOL_MYTH)
+    m_port = "6543";
   else if (m_protocol == NET_PROTOCOL_SFTP)
     m_port = "22";
   else
@@ -225,7 +241,11 @@ void CGUIDialogNetworkSetup::UpdateButtons()
   // remote path
   SET_CONTROL_LABEL2(CONTROL_REMOTE_PATH, m_path);
   CONTROL_ENABLE_ON_CONDITION(CONTROL_REMOTE_PATH, m_protocol != NET_PROTOCOL_DAAP &&
-                                                   m_protocol != NET_PROTOCOL_UPNP);
+                                                   m_protocol != NET_PROTOCOL_UPNP &&
+                                                   m_protocol != NET_PROTOCOL_TUXBOX &&
+                                                   m_protocol != NET_PROTOCOL_HTSP &&
+                                                   m_protocol != NET_PROTOCOL_VTP &&
+                                                   m_protocol != NET_PROTOCOL_MYTH);
   if (m_protocol == NET_PROTOCOL_FTP ||
       m_protocol == NET_PROTOCOL_HTTP ||
       m_protocol == NET_PROTOCOL_HTTPS ||
@@ -246,6 +266,7 @@ void CGUIDialogNetworkSetup::UpdateButtons()
   // username
   SET_CONTROL_LABEL2(CONTROL_USERNAME, m_username);
   CONTROL_ENABLE_ON_CONDITION(CONTROL_USERNAME, m_protocol != NET_PROTOCOL_DAAP &&
+                                                m_protocol != NET_PROTOCOL_VTP &&
                                                 m_protocol != NET_PROTOCOL_UPNP &&
                                                 m_protocol != NET_PROTOCOL_NFS);
 
@@ -258,6 +279,10 @@ void CGUIDialogNetworkSetup::UpdateButtons()
                                                    m_protocol == NET_PROTOCOL_HTTPS ||
                                                    m_protocol == NET_PROTOCOL_DAV ||
                                                    m_protocol == NET_PROTOCOL_DAVS ||
+                                                   m_protocol == NET_PROTOCOL_TUXBOX ||
+                                                   m_protocol == NET_PROTOCOL_HTSP ||
+                                                   m_protocol == NET_PROTOCOL_VTP ||
+                                                   m_protocol == NET_PROTOCOL_MYTH ||
                                                    m_protocol == NET_PROTOCOL_RSS ||
                                                    m_protocol == NET_PROTOCOL_DAAP ||
                                                    m_protocol == NET_PROTOCOL_SFTP);
@@ -267,13 +292,14 @@ void CGUIDialogNetworkSetup::UpdateButtons()
   // password
   SET_CONTROL_LABEL2(CONTROL_PASSWORD, m_password);
   CONTROL_ENABLE_ON_CONDITION(CONTROL_PASSWORD, m_protocol != NET_PROTOCOL_DAAP &&
+                                                m_protocol != NET_PROTOCOL_VTP &&
                                                 m_protocol != NET_PROTOCOL_UPNP &&
                                                 m_protocol != NET_PROTOCOL_NFS);
 
   SendMessage(GUI_MSG_SET_TYPE, CONTROL_PASSWORD, CGUIEditControl::INPUT_TYPE_PASSWORD, 12326);
 
   // TODO: FIX BETTER DAAP SUPPORT
-  // server browse should be disabled if we are in DAAP, FTP, HTTP, HTTPS, RSS, DAV or DAVS
+  // server browse should be disabled if we are in DAAP, FTP, HTTP, HTTPS, RSS, HTSP, VTP, TUXBOX, DAV or DAVS
   CONTROL_ENABLE_ON_CONDITION(CONTROL_SERVER_BROWSE, !m_server.empty() || !(m_protocol == NET_PROTOCOL_FTP ||
                                                                               m_protocol == NET_PROTOCOL_HTTP ||
                                                                               m_protocol == NET_PROTOCOL_HTTPS ||
@@ -281,7 +307,12 @@ void CGUIDialogNetworkSetup::UpdateButtons()
                                                                               m_protocol == NET_PROTOCOL_DAVS ||
                                                                               m_protocol == NET_PROTOCOL_DAAP ||
                                                                               m_protocol == NET_PROTOCOL_RSS ||
-                                                                              m_protocol == NET_PROTOCOL_SFTP));
+                                                                              m_protocol == NET_PROTOCOL_HTSP ||
+                                                                              m_protocol == NET_PROTOCOL_VTP ||
+                                                                              m_protocol == NET_PROTOCOL_MYTH ||
+                                                                              m_protocol == NET_PROTOCOL_TUXBOX||
+                                                                              m_protocol == NET_PROTOCOL_SFTP ||
+                                                                              m_protocol == NET_PROTOCOL_AFP));
 }
 
 std::string CGUIDialogNetworkSetup::ConstructPath() const
@@ -303,12 +334,22 @@ std::string CGUIDialogNetworkSetup::ConstructPath() const
     url.SetProtocol("daap");
   else if (m_protocol == NET_PROTOCOL_UPNP)
     url.SetProtocol("upnp");
+  else if (m_protocol == NET_PROTOCOL_TUXBOX)
+    url.SetProtocol("tuxbox");
   else if (m_protocol == NET_PROTOCOL_RSS)
     url.SetProtocol("rss");
+  else if (m_protocol == NET_PROTOCOL_HTSP)
+    url.SetProtocol("htsp");
+  else if (m_protocol == NET_PROTOCOL_VTP)
+    url.SetProtocol("vtp");
+  else if (m_protocol == NET_PROTOCOL_MYTH)
+    url.SetProtocol("myth");
   else if (m_protocol == NET_PROTOCOL_NFS)
     url.SetProtocol("nfs");
   else if (m_protocol == NET_PROTOCOL_SFTP)
     url.SetProtocol("sftp");
+  else if (m_protocol == NET_PROTOCOL_AFP)
+    url.SetProtocol("afp");
     
   if (!m_username.empty())
   {
@@ -325,6 +366,10 @@ std::string CGUIDialogNetworkSetup::ConstructPath() const
        (m_protocol == NET_PROTOCOL_DAVS) ||
        (m_protocol == NET_PROTOCOL_RSS) ||
        (m_protocol == NET_PROTOCOL_DAAP && !m_server.empty()) ||
+       (m_protocol == NET_PROTOCOL_HTSP) ||
+       (m_protocol == NET_PROTOCOL_VTP) ||
+       (m_protocol == NET_PROTOCOL_MYTH) ||
+       (m_protocol == NET_PROTOCOL_TUXBOX) ||
        (m_protocol == NET_PROTOCOL_SFTP) ||
        (m_protocol == NET_PROTOCOL_NFS))
       && !m_port.empty() && atoi(m_port.c_str()) > 0)
@@ -355,12 +400,22 @@ void CGUIDialogNetworkSetup::SetPath(const std::string &path)
     m_protocol = NET_PROTOCOL_DAAP;
   else if (url.IsProtocol("upnp"))
     m_protocol = NET_PROTOCOL_UPNP;
+  else if (url.IsProtocol("tuxbox"))
+    m_protocol = NET_PROTOCOL_TUXBOX;
+  else if (url.IsProtocol("htsp"))
+    m_protocol = NET_PROTOCOL_HTSP;
+  else if (url.IsProtocol("vtp"))
+    m_protocol = NET_PROTOCOL_VTP;
+  else if (url.IsProtocol("myth"))
+    m_protocol = NET_PROTOCOL_MYTH;
   else if (url.IsProtocol("rss"))
     m_protocol = NET_PROTOCOL_RSS;
   else if (url.IsProtocol("nfs"))
     m_protocol = NET_PROTOCOL_NFS;
   else if (url.IsProtocol("sftp") || url.IsProtocol("ssh"))
     m_protocol = NET_PROTOCOL_SFTP;
+  else if (url.IsProtocol("afp"))
+    m_protocol = NET_PROTOCOL_AFP;
   else
     m_protocol = NET_PROTOCOL_SMB;  // default to smb
   m_username = url.GetUserName();

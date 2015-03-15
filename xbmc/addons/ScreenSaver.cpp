@@ -51,7 +51,7 @@ bool CScreenSaver::CreateScreenSaver()
     g_alarmClock.Stop(SCRIPT_ALARM, true);
 
     if (!CScriptInvocationManager::Get().Stop(LibPath()))
-      CScriptInvocationManager::Get().ExecuteAsync(LibPath(), Clone());
+      CScriptInvocationManager::Get().Execute(LibPath(), Clone());
     return true;
   }
  // pass it the screen width,height

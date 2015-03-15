@@ -111,7 +111,7 @@ void CPeripheralImon::ActionOnImonConflict(bool deviceInserted /*= true*/)
     bool enableJoystickNow = !deviceInserted && CSettings::Get().GetBool("input.enablejoystick");
     CLog::Log(LOGNOTICE, "Problematic iMON hardware %s. Joystick usage: %s", (deviceInserted ? "detected" : "was removed"),
         (enableJoystickNow) ? "enabled." : "disabled." );
-    CInputManager::Get().SetEnabledJoystick(enableJoystickNow);
+    CInputManager::GetInstance().SetEnabledJoystick(enableJoystickNow);
 #endif
   }
 }

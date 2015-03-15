@@ -20,7 +20,6 @@
 
 #include "GUIWindowPointer.h"
 #include "input/MouseStat.h"
-#include "input/InputManager.h"
 #include "windowing/WindowingFactory.h"
 #include <climits>
 #define ID_POINTER 10
@@ -59,7 +58,7 @@ void CGUIWindowPointer::UpdateVisibility()
 {
   if(g_Windowing.HasCursor())
   {
-    if (CInputManager::Get().IsMouseActive())
+    if (g_Mouse.IsActive())
       Show();
     else
       Close();
@@ -81,14 +80,13 @@ void CGUIWindowPointer::OnWindowLoaded()
 
 void CGUIWindowPointer::Process(unsigned int currentTime, CDirtyRegionList &dirtyregions)
 {
-  bool active = CInputManager::Get().IsMouseActive();
+  bool active = g_Mouse.IsActive();
   if (active != m_active)
   {
     MarkDirtyRegion();
     m_active = active;
   }
-  MousePosition pos = CInputManager::Get().GetMousePosition();
-  SetPosition((float)pos.x, (float)pos.y);
-  SetPointer(CInputManager::Get().GetMouseState());
+  SetPosition((float)g_Mouse.GetX(), (float)g_Mouse.GetY());
+  SetPointer(g_Mouse.GetState());
   return CGUIWindow::Process(currentTime, dirtyregions);
 }

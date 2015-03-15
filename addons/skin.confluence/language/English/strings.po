@@ -582,7 +582,7 @@ msgid "Scheduled Time"
 msgstr ""
 
 msgctxt "#31502"
-msgid "TV"
+msgid "Live TV"
 msgstr ""
 
 msgctxt "#31503"

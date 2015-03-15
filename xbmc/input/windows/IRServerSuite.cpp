@@ -18,19 +18,25 @@
  *
  */
 
+#include "threads/SystemClock.h"
 #include "IRServerSuite.h"
 #include "IrssMessage.h"
 #include "input/ButtonTranslator.h"
 #include "utils/log.h"
+#include "settings/AdvancedSettings.h"
+#include "utils/TimeUtils.h"
 #include <Ws2tcpip.h>
 
 #define IRSS_PORT 24000
+
+CRemoteControl g_RemoteControl;
 
 CRemoteControl::CRemoteControl() : CThread("RemoteControl")
 {
   m_socket = INVALID_SOCKET;
   m_bInitialized = false;
   m_isConnecting = false;
+  m_iAttempt     = 0;
   Reset();
 }
 
@@ -41,8 +47,6 @@ CRemoteControl::~CRemoteControl()
 
 void CRemoteControl::Disconnect()
 {
-  m_event.Set();
-
   StopThread();
   Close();
 }
@@ -71,8 +75,7 @@ void CRemoteControl::Reset()
 
 void CRemoteControl::Initialize()
 {
-  if (m_isConnecting || m_bInitialized || IsRunning())
-    return;
+  if (m_isConnecting || m_bInitialized) return;
   //trying to connect when there is nothing to connect to is kinda slow so kick it off in a thread.
   Create();
 }
@@ -80,22 +83,25 @@ void CRemoteControl::Initialize()
 void CRemoteControl::Process()
 {
   unsigned int iMsRetryDelay = 5000;
-  int iAttempt = 0;
+  unsigned int time = XbmcThreads::SystemClockMillis() - iMsRetryDelay;
   // try to connect 60 times @ a 5 second interval (5 minutes)
   // multiple tries because irss service might be up and running a little later then xbmc on boot.
-  while (!m_bStop && iAttempt <= 60)
+  while (!m_bStop && m_iAttempt <= 60)
   {
-    if (Connect())
-      break;
+    if (XbmcThreads::SystemClockMillis() - time >= iMsRetryDelay)
+    {
+      time = XbmcThreads::SystemClockMillis();
+      if (Connect())
+        break;
 
-    if(iAttempt == 0)
-      CLog::Log(LOGINFO, "CRemoteControl::Process - failed to connect to irss, will keep retrying every %d seconds", iMsRetryDelay / 1000);
+      if(m_iAttempt == 0)
+        CLog::Log(LOGINFO, "CRemoteControl::Process - failed to connect to irss, will keep retrying every %d seconds", iMsRetryDelay / 1000);
 
-    ++iAttempt;
-    
-    if (AbortableWait(m_event, iMsRetryDelay) == WAIT_INTERRUPTED)
-      break;
+      m_iAttempt++;
+    }
+    Sleep(1000);
   }
+  m_iAttempt     = 0;
 }
 
 bool CRemoteControl::Connect()
@@ -114,7 +120,8 @@ bool CRemoteControl::Connect()
   res = getaddrinfo("localhost", service, &hints, &result);
   if(res)
   {
-    CLog::Log(LOGDEBUG, "CRemoteControl::Connect - getaddrinfo failed: %s", gai_strerror(res));
+    if(m_iAttempt == 0)
+      CLog::Log(LOGDEBUG, "CRemoteControl::Connect - getaddrinfo failed: %s", gai_strerror(res));
     return false;
   }
 
@@ -126,7 +133,8 @@ bool CRemoteControl::Connect()
       strcpy(portbuf, "[unknown]");
     }
 
-    CLog::Log(LOGDEBUG, "CRemoteControl::Connect - connecting to: %s:%s ...", namebuf, portbuf);
+    if(m_iAttempt == 0)
+      CLog::Log(LOGDEBUG, "CRemoteControl::Connect - connecting to: %s:%s ...", namebuf, portbuf);
 
     m_socket = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
     if(m_socket == INVALID_SOCKET)
@@ -142,7 +150,8 @@ bool CRemoteControl::Connect()
   freeaddrinfo(result);
   if(m_socket == INVALID_SOCKET)
   {
-    CLog::Log(LOGDEBUG, "CRemoteControl::Connect - failed to connect");
+    if(m_iAttempt == 0)
+      CLog::Log(LOGDEBUG, "CRemoteControl::Connect - failed to connect");
     Close();
     return false;
   }
@@ -150,7 +159,8 @@ bool CRemoteControl::Connect()
   u_long iMode = 1; //non-blocking
   if (ioctlsocket(m_socket, FIONBIO, &iMode) == SOCKET_ERROR)
   {
-    CLog::Log(LOGERROR, "IRServerSuite: failed to set socket to non-blocking.");
+    if(m_iAttempt == 0)
+      CLog::Log(LOGERROR, "IRServerSuite: failed to set socket to non-blocking.");
     Close();
     return false;
   }
@@ -159,7 +169,8 @@ bool CRemoteControl::Connect()
   CIrssMessage mess(IRSSMT_RegisterClient, IRSSMF_Request);
   if (!SendPacket(mess))
   {
-    CLog::Log(LOGERROR, "IRServerSuite: failed to send RegisterClient packet.");
+    if(m_iAttempt == 0)
+      CLog::Log(LOGERROR, "IRServerSuite: failed to send RegisterClient packet.");
     return false;
   }
   m_isConnecting = true;
@@ -352,8 +363,10 @@ bool CRemoteControl::HandleRemoteEvent(CIrssMessage& message)
     keycode[keycodelength] = '\0';
     //translate to a buttoncode xbmc understands
     m_button = CButtonTranslator::GetInstance().TranslateLircRemoteString(deviceName, keycode);
-    CLog::Log(LOGDEBUG, "IRServerSuite, RemoteEvent: %s %s", deviceName, keycode);
-    
+    if (g_advancedSettings.m_logLevel == LOG_LEVEL_DEBUG_FREEMEM)
+    {
+      CLog::Log(LOGINFO, "IRServerSuite, RemoteEvent: %s %s", deviceName, keycode);
+    }
     delete[] deviceName;
     delete[] keycode;
     return true;
@@ -470,4 +483,8 @@ WORD CRemoteControl::GetButton()
 unsigned int CRemoteControl::GetHoldTime() const
 {
   return 0;
+}
+
+void CRemoteControl::setUsed(bool value)
+{
 }

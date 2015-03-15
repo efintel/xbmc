@@ -33,7 +33,7 @@
 #include "GUITexture.h"
 #include "windowing/WindowingFactory.h"
 #include "utils/Variant.h"
-#include "input/Key.h"
+#include "Key.h"
 #include "utils/StringUtils.h"
 
 #include "windows/GUIWindowHome.h"
@@ -1068,7 +1068,7 @@ void CGUIWindowManager::DeInitialize()
   for (WindowMap::iterator it = m_mapWindows.begin(); it != m_mapWindows.end(); ++it)
   {
     CGUIWindow* pWindow = (*it).second;
-    if (IsWindowActive(it->first, false))
+    if (IsWindowActive(it->first))
     {
       pWindow->DisableAnimations();
       pWindow->Close(true);

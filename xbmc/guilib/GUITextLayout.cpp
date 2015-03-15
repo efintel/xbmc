@@ -403,13 +403,6 @@ void CGUITextLayout::ParseText(const std::wstring &text, uint32_t defaultStyle, 
          (!on && (currentStyle & FONT_STYLE_LOWERCASE)))  // or matching start point
         newStyle = FONT_STYLE_LOWERCASE;
     }
-    else if (text.compare(pos, 11, L"CAPITALIZE]") == 0)
-    {
-      pos += 11;
-      if ((on && text.find(L"[/CAPITALIZE]", pos) != std::string::npos) ||  // check for a matching end point
-         (!on && (currentStyle & FONT_STYLE_CAPITALIZE)))  // or matching start point
-        newStyle = FONT_STYLE_CAPITALIZE;
-    }
     else if (text.compare(pos, 3, L"CR]") == 0 && on)
     {
       newLine = true;
@@ -457,8 +450,6 @@ void CGUITextLayout::ParseText(const std::wstring &text, uint32_t defaultStyle, 
         StringUtils::ToUpper(subText);
       if (currentStyle & FONT_STYLE_LOWERCASE)
         StringUtils::ToLower(subText);
-      if (currentStyle & FONT_STYLE_CAPITALIZE)
-        StringUtils::ToCapitalize(subText);
       AppendToUTF32(subText, ((currentStyle & 3) << 24) | (currentColor << 16), parsedText);
       if (newLine)
         parsedText.push_back(L'\n');
@@ -479,8 +470,6 @@ void CGUITextLayout::ParseText(const std::wstring &text, uint32_t defaultStyle, 
     StringUtils::ToUpper(subText);
   if (currentStyle & FONT_STYLE_LOWERCASE)
     StringUtils::ToLower(subText);
-  if (currentStyle & FONT_STYLE_CAPITALIZE)
-    StringUtils::ToCapitalize(subText);
   AppendToUTF32(subText, ((currentStyle & 3) << 24) | (currentColor << 16), parsedText);
 }
 

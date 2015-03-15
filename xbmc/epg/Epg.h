@@ -40,6 +40,7 @@ namespace EPG
   class CEpg : public Observable
   {
     friend class CEpgDatabase;
+    friend class CEpgInfoTag;
 
   public:
     /*!
@@ -56,7 +57,7 @@ namespace EPG
      * @param channel The channel to create the EPG for.
      * @param bLoadedFromDb True if this table was loaded from the database, false otherwise.
      */
-    CEpg(const PVR::CPVRChannelPtr &channel, bool bLoadedFromDb = false);
+    CEpg(PVR::CPVRChannelPtr channel, bool bLoadedFromDb = false);
 
     /*!
      * @brief Destroy this EPG instance.
@@ -85,7 +86,7 @@ namespace EPG
      * @brief Channel the channel tag linked to this EPG table.
      * @param channel The new channel tag.
      */
-    void SetChannel(const PVR::CPVRChannelPtr &channel);
+    void SetChannel(PVR::CPVRChannelPtr channel);
 
     /*!
      * @brief Get the name of the scraper to use for this table.
@@ -191,25 +192,16 @@ namespace EPG
     CEpgInfoTagPtr GetTagBetween(const CDateTime &beginTime, const CDateTime &endTime) const;
 
     /*!
-     * @brief Get the infotag with the given begin time.
-     *
-     * Get the infotag with the given ID.
-     * If it wasn't found, try finding the event with the given start time
-     *
-     * @param beginTime The start time in UTC of the event to find if it wasn't found by it's unique ID.
-     * @return The found tag or an empty tag if it wasn't found.
-     */
-    CEpgInfoTagPtr GetTag(const CDateTime &beginTime) const;
-    /*!
      * @brief Get the infotag with the given ID.
      *
      * Get the infotag with the given ID.
      * If it wasn't found, try finding the event with the given start time
      *
      * @param uniqueID The unique ID of the event to find.
-     * @return The found tag or an empty tag if it wasn't found.
+     * @param beginTime The start time in UTC of the event to find if it wasn't found by it's unique ID.
+     * @return The found tag or NULL if it wasn't found.
      */
-    CEpgInfoTagPtr GetTag(int uniqueID) const;
+    CEpgInfoTagPtr GetTag(const CDateTime &beginTime) const;
 
     /*!
      * @brief Update an entry in this EPG.
@@ -347,6 +339,8 @@ namespace EPG
     bool UpdateEntries(const CEpg &epg, bool bStoreInDb = true);
 
     bool IsRemovableTag(const EPG::CEpgInfoTag &tag) const;
+
+    void UpdateRecording(CEpgInfoTagPtr &tag);
 
     std::map<CDateTime, CEpgInfoTagPtr> m_tags;
     std::map<int, CEpgInfoTagPtr>       m_changedTags;

@@ -32,10 +32,10 @@
             });
         },
         'displayCommunicationError': function (m) {
-            window.clearTimeout(xbmc.core.commsErrorTimeout);
+            window.clearTimeout(xbmc.core.commsErrorTiemout);
             var message = m || 'Connection to server lost';
             $('#commsErrorPanel').html(message).show();
-            xbmc.core.commsErrorTimeout = window.setTimeout('xbmc.core.hideCommunicationError()', 5000);
+            xbmc.core.commsErrorTiemout = window.setTimeout('xbmc.core.hideCommunicationError()', 5000);
         },
         'durationToString': function (duration) {
             var total_seconds = duration || 0,

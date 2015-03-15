@@ -39,7 +39,7 @@
 #include "DVDFileInfo.h"
 
 #include "utils/LangCodeExpander.h"
-#include "input/Key.h"
+#include "guilib/Key.h"
 #include "guilib/LocalizeStrings.h"
 
 #include "utils/URIUtils.h"
@@ -174,7 +174,7 @@ public:
     if(STREAM_SOURCE_MASK(ss.source) == STREAM_SOURCE_DEMUX_SUB || STREAM_SOURCE_MASK(ss.source) == STREAM_SOURCE_TEXT)
       return false;
 
-    if ((ss.flags & CDemuxStream::FLAG_FORCED) && (original || g_LangCodeExpander.CompareISO639Codes(ss.language, audiolang)))
+    if ((ss.flags & CDemuxStream::FLAG_FORCED) && (original || g_LangCodeExpander.CompareLangCodes(ss.language, audiolang)))
       return false;
 
     if ((ss.flags & CDemuxStream::FLAG_DEFAULT))
@@ -183,7 +183,7 @@ public:
     if(!original)
     {
       std::string subtitle_language = g_langInfo.GetSubtitleLanguage();
-      if (g_LangCodeExpander.CompareISO639Codes(subtitle_language, ss.language))
+      if (g_LangCodeExpander.CompareLangCodes(subtitle_language, ss.language))
         return false;
     }
 
@@ -199,8 +199,8 @@ static bool PredicateAudioPriority(const SelectionStream& lh, const SelectionStr
   if(!StringUtils::EqualsNoCase(CSettings::Get().GetString("locale.audiolanguage"), "original"))
   {
     std::string audio_language = g_langInfo.GetAudioLanguage();
-    PREDICATE_RETURN(g_LangCodeExpander.CompareISO639Codes(audio_language, lh.language)
-                   , g_LangCodeExpander.CompareISO639Codes(audio_language, rh.language));
+    PREDICATE_RETURN(g_LangCodeExpander.CompareLangCodes(audio_language, lh.language)
+                   , g_LangCodeExpander.CompareLangCodes(audio_language, rh.language));
 
     bool hearingimp = CSettings::Get().GetBool("accessibility.audiohearing");
     PREDICATE_RETURN(!hearingimp ? !(lh.flags & CDemuxStream::FLAG_HEARING_IMPAIRED) : lh.flags & CDemuxStream::FLAG_HEARING_IMPAIRED
@@ -275,8 +275,8 @@ public:
 
     if(!subson || original)
     {
-      PREDICATE_RETURN(lh.flags & CDemuxStream::FLAG_FORCED && g_LangCodeExpander.CompareISO639Codes(lh.language, audiolang)
-                     , rh.flags & CDemuxStream::FLAG_FORCED && g_LangCodeExpander.CompareISO639Codes(rh.language, audiolang));
+      PREDICATE_RETURN(lh.flags & CDemuxStream::FLAG_FORCED && g_LangCodeExpander.CompareLangCodes(lh.language, audiolang)
+                     , rh.flags & CDemuxStream::FLAG_FORCED && g_LangCodeExpander.CompareLangCodes(rh.language, audiolang));
 
       PREDICATE_RETURN(lh.flags & CDemuxStream::FLAG_FORCED
                      , rh.flags & CDemuxStream::FLAG_FORCED);
@@ -285,14 +285,14 @@ public:
     std::string subtitle_language = g_langInfo.GetSubtitleLanguage();
     if(!original)
     {
-      PREDICATE_RETURN((STREAM_SOURCE_MASK(lh.source) == STREAM_SOURCE_DEMUX_SUB || STREAM_SOURCE_MASK(lh.source) == STREAM_SOURCE_TEXT) && g_LangCodeExpander.CompareISO639Codes(subtitle_language, lh.language)
-                     , (STREAM_SOURCE_MASK(rh.source) == STREAM_SOURCE_DEMUX_SUB || STREAM_SOURCE_MASK(rh.source) == STREAM_SOURCE_TEXT) && g_LangCodeExpander.CompareISO639Codes(subtitle_language, rh.language));
+      PREDICATE_RETURN((STREAM_SOURCE_MASK(lh.source) == STREAM_SOURCE_DEMUX_SUB || STREAM_SOURCE_MASK(lh.source) == STREAM_SOURCE_TEXT) && g_LangCodeExpander.CompareLangCodes(subtitle_language, lh.language)
+                     , (STREAM_SOURCE_MASK(rh.source) == STREAM_SOURCE_DEMUX_SUB || STREAM_SOURCE_MASK(rh.source) == STREAM_SOURCE_TEXT) && g_LangCodeExpander.CompareLangCodes(subtitle_language, rh.language));
     }
 
     if(!original)
     {
-      PREDICATE_RETURN(g_LangCodeExpander.CompareISO639Codes(subtitle_language, lh.language)
-                     , g_LangCodeExpander.CompareISO639Codes(subtitle_language, rh.language));
+      PREDICATE_RETURN(g_LangCodeExpander.CompareLangCodes(subtitle_language, lh.language)
+                     , g_LangCodeExpander.CompareLangCodes(subtitle_language, rh.language));
 
       bool hearingimp = CSettings::Get().GetBool("accessibility.subhearing");
       PREDICATE_RETURN(!hearingimp ? !(lh.flags & CDemuxStream::FLAG_HEARING_IMPAIRED) : lh.flags & CDemuxStream::FLAG_HEARING_IMPAIRED
@@ -756,7 +756,8 @@ bool CDVDPlayer::OpenInputStream()
   // find any available external subtitles for non dvd files
   if (!m_pInputStream->IsStreamType(DVDSTREAM_TYPE_DVD)
   &&  !m_pInputStream->IsStreamType(DVDSTREAM_TYPE_PVRMANAGER)
-  &&  !m_pInputStream->IsStreamType(DVDSTREAM_TYPE_TV))
+  &&  !m_pInputStream->IsStreamType(DVDSTREAM_TYPE_TV)
+  &&  !m_pInputStream->IsStreamType(DVDSTREAM_TYPE_HTSP))
   {
     // find any available external subtitles
     std::vector<std::string> filenames;
@@ -1487,13 +1488,10 @@ bool CDVDPlayer::CheckDelayedChannelEntry(void)
   if (m_ChannelEntryTimeOut.IsTimePast())
   {
     CFileItem currentFile(g_application.CurrentFileItem());
-    CPVRChannelPtr currentChannel(currentFile.GetPVRChannelInfoTag());
-    if (currentChannel)
-    {
-      SwitchChannel(currentChannel);
+    CPVRChannel *currentChannel = currentFile.GetPVRChannelInfoTag();
+    SwitchChannel(*currentChannel);
 
-      bReturn = true;
-    }
+    bReturn = true;
     m_ChannelEntryTimeOut.SetInfinite();
   }
 
@@ -1821,7 +1819,6 @@ void CDVDPlayer::HandlePlaySpeed()
         {
           CLog::Log(LOGDEBUG, "CDVDPlayer::Process - Seeking to catch up");
           m_SpeedState.lastseekpts = (int)DVD_TIME_TO_MSEC(m_clock.GetClock());
-          m_SpeedState.needsync = true;
           int iTime = DVD_TIME_TO_MSEC(m_clock.GetClock() + m_State.time_offset + 500000.0 * m_playSpeed / DVD_PLAYSPEED_NORMAL);
           m_messenger.Put(new CDVDMsgPlayerSeek(iTime, (GetPlaySpeed() < 0), true, false, false, true, false));
         }
@@ -2477,11 +2474,10 @@ void CDVDPlayer::HandleMessages()
           m_OmxPlayerState.av_clock.OMXSetSpeed(speed);
           CLog::Log(LOGDEBUG, "%s::%s CDVDMsg::PLAYER_SETSPEED speed : %d (%d)", "CDVDPlayer", __FUNCTION__, speed, m_playSpeed);
         }
-        else if ((speed == DVD_PLAYSPEED_NORMAL) && m_SpeedState.needsync)
+        else if (m_playSpeed < 0 && speed >= 0)
         {
           int64_t iTime = (int64_t)DVD_TIME_TO_MSEC(m_clock.GetClock() + m_State.time_offset);
           m_messenger.Put(new CDVDMsgPlayerSeek(iTime, true, true, false, false, true));
-          m_SpeedState.needsync = false;
         }
 
         // if playspeed is different then DVD_PLAYSPEED_NORMAL or DVD_PLAYSPEED_PAUSE
@@ -2527,7 +2523,7 @@ void CDVDPlayer::HandleMessages()
       {
         FlushBuffers(false);
         CDVDInputStream::IChannel* input = dynamic_cast<CDVDInputStream::IChannel*>(m_pInputStream);
-        if(input && input->SelectChannel(static_cast<CDVDMsgType <CPVRChannelPtr> *>(pMsg)->m_value))
+        if(input && input->SelectChannel(static_cast<CDVDMsgType <CPVRChannel> *>(pMsg)->m_value))
         {
           SAFE_DELETE(m_pDemuxer);
         }else
@@ -3403,7 +3399,7 @@ bool CDVDPlayer::AdaptForcedSubtitles()
 
     for(SelectionStreams::iterator it = streams.begin(); it != streams.end() && !valid; ++it)
     {
-      if (it->flags & CDemuxStream::FLAG_FORCED && g_LangCodeExpander.CompareISO639Codes(it->language, as.language))
+      if (it->flags & CDemuxStream::FLAG_FORCED && g_LangCodeExpander.CompareLangCodes(it->language, as.language))
       {
         if(OpenStream(m_CurrentSubtitle, it->id, it->source))
         {
@@ -4077,7 +4073,7 @@ bool CDVDPlayer::SetPlayerState(const std::string& state)
 int CDVDPlayer::GetChapterCount()
 {
   CSingleLock lock(m_StateSection);
-  return m_State.chapters.size();
+  return m_State.chapter_count;
 }
 
 int CDVDPlayer::GetChapter()
@@ -4086,13 +4082,10 @@ int CDVDPlayer::GetChapter()
   return m_State.chapter;
 }
 
-void CDVDPlayer::GetChapterName(std::string& strChapterName, int chapterIdx)
+void CDVDPlayer::GetChapterName(std::string& strChapterName)
 {
   CSingleLock lock(m_StateSection);
-  if (chapterIdx == -1 && m_State.chapter > 0 && m_State.chapter <= (int) m_State.chapters.size())
-    strChapterName = m_State.chapters[m_State.chapter - 1].first;
-  else if (chapterIdx > 0 && chapterIdx <= (int) m_State.chapters.size())
-    strChapterName = m_State.chapters[chapterIdx - 1].first;
+  strChapterName = m_State.chapter_name;
 }
 
 int CDVDPlayer::SeekChapter(int iChapter)
@@ -4110,15 +4103,6 @@ int CDVDPlayer::SeekChapter(int iChapter)
   }
 
   return 0;
-}
-
-int64_t CDVDPlayer::GetChapterPos(int chapterIdx)
-{
-  CSingleLock lock(m_StateSection);
-  if (chapterIdx > 0 && chapterIdx <= (int) m_StateInput.chapters.size())
-    return m_State.chapters[chapterIdx - 1].second;
-
-  return -1;
 }
 
 int CDVDPlayer::AddSubtitle(const std::string& strSubPath)
@@ -4172,9 +4156,6 @@ int CDVDPlayer::GetSourceBitrate()
 
 void CDVDPlayer::GetAudioStreamInfo(int index, SPlayerAudioStreamInfo &info)
 {
-  if (index == CURRENT_STREAM)
-    index = GetAudioStream();
-
   if (index < 0 || index > GetAudioStreamCount() - 1 )
     return;
 
@@ -4292,21 +4273,9 @@ void CDVDPlayer::UpdatePlayState(double timeout)
 
   if(m_pDemuxer)
   {
-    if (IsInMenu())
-      state.chapter = 0;
-    else
-      state.chapter       = m_pDemuxer->GetChapter();
-
-    state.chapters.clear();
-    if (m_pDemuxer->GetChapterCount() > 0)
-    {
-      for (int i = 0; i < m_pDemuxer->GetChapterCount(); ++i)
-      {
-        std::string name;
-        m_pDemuxer->GetChapterName(name, i + 1);
-        state.chapters.push_back(make_pair(name, m_pDemuxer->GetChapterPos(i + 1)));
-      }
-    }
+    state.chapter       = m_pDemuxer->GetChapter();
+    state.chapter_count = m_pDemuxer->GetChapterCount();
+    m_pDemuxer->GetChapterName(state.chapter_name);
 
     if(state.dts == DVD_NOPTS_VALUE)
       state.time     = 0;
@@ -4511,7 +4480,7 @@ std::string CDVDPlayer::GetPlayingTitle()
   return "";
 }
 
-bool CDVDPlayer::SwitchChannel(const CPVRChannelPtr &channel)
+bool CDVDPlayer::SwitchChannel(CPVRChannel &channel)
 {
   if (!g_PVRManager.CheckParentalLock(channel))
     return false;
@@ -4524,7 +4493,7 @@ bool CDVDPlayer::SwitchChannel(const CPVRChannelPtr &channel)
   UpdatePlayState(0);
 
   /* select the new channel */
-  m_messenger.Put(new CDVDMsgType<CPVRChannelPtr>(CDVDMsg::PLAYER_CHANNEL_SELECT, channel));
+  m_messenger.Put(new CDVDMsgType<CPVRChannel>(CDVDMsg::PLAYER_CHANNEL_SELECT, channel));
 
   return true;
 }
@@ -4532,7 +4501,6 @@ bool CDVDPlayer::SwitchChannel(const CPVRChannelPtr &channel)
 bool CDVDPlayer::CachePVRStream(void) const
 {
   return m_pInputStream->IsStreamType(DVDSTREAM_TYPE_PVRMANAGER) &&
-      (!g_PVRManager.IsPlayingRecording() ||
-          (m_item.HasPVRRecordingInfoTag() && m_item.GetPVRRecordingInfoTag()->IsBeingRecorded()))&&
+      !g_PVRManager.IsPlayingRecording() &&
       g_advancedSettings.m_bPVRCacheInDvdPlayer;
 }

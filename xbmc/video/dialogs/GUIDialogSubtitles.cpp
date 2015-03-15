@@ -22,7 +22,6 @@
 #include "GUIUserMessages.h"
 #include "Application.h"
 #include "GUIDialogSubtitles.h"
-#include "LangInfo.h"
 #include "addons/AddonManager.h"
 #include "cores/IPlayer.h"
 #include "dialogs/GUIDialogKaiToast.h"
@@ -32,7 +31,7 @@
 #include "filesystem/SpecialProtocol.h"
 #include "filesystem/StackDirectory.h"
 #include "guilib/GUIKeyboardFactory.h"
-#include "input/Key.h"
+#include "guilib/Key.h"
 #include "settings/MediaSettings.h"
 #include "settings/Settings.h"
 #include "settings/VideoSettings.h"
@@ -342,15 +341,16 @@ void CGUIDialogSubtitles::Search(const std::string &search/*=""*/)
     SPlayerAudioStreamInfo info;
     std::string strLanguage;
 
-    g_application.m_pPlayer->GetAudioStreamInfo(CURRENT_STREAM, info);
+    int currentAudio = g_application.m_pPlayer->GetAudioStream();
+    g_application.m_pPlayer->GetAudioStreamInfo(currentAudio, info);
 
-    if (!g_LangCodeExpander.Lookup(info.language, strLanguage))
+    if (!g_LangCodeExpander.Lookup(strLanguage, info.language))
       strLanguage = "Unknown";
 
     preferredLanguage = strLanguage;
   }
   else if (StringUtils::EqualsNoCase(preferredLanguage, "default"))
-    preferredLanguage = g_langInfo.GetEnglishLanguageName();
+    preferredLanguage = CSettings::Get().GetString("locale.language");
 
   url.SetOption("preferredlanguage", preferredLanguage);
 
@@ -502,7 +502,7 @@ void CGUIDialogSubtitles::OnDownloadComplete(const CFileItemList *items, const s
 
   // Extract the language and appropriate extension
   std::string strSubLang;
-  g_LangCodeExpander.ConvertToISO6391(language, strSubLang);
+  g_LangCodeExpander.ConvertToTwoCharCode(strSubLang, language);
 
   // Iterate over all items to transfer
   for (unsigned int i = 0; i < vecFiles.size() && i < (unsigned int) items->Size(); i++)

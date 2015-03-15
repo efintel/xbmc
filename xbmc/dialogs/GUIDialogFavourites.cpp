@@ -25,12 +25,11 @@
 #include "filesystem/FavouritesDirectory.h"
 #include "guilib/GUIWindowManager.h"
 #include "guilib/GUIKeyboardFactory.h"
-#include "input/Key.h"
+#include "guilib/Key.h"
 #include "filesystem/File.h"
 #include "FileItem.h"
 #include "guilib/LocalizeStrings.h"
 #include "storage/MediaManager.h"
-#include "ContextMenuManager.h"
 
 using namespace XFILE;
 
@@ -130,10 +129,7 @@ void CGUIDialogFavourites::OnPopupMenu(int item)
   choices.Add(3, 15015);
   choices.Add(4, 118);
   choices.Add(5, 20019);
-
-  CFileItemPtr itemPtr = m_favourites->Get(item);
-  CContextMenuManager::Get().AddVisibleItems(itemPtr, choices);
-
+  
   int button = CGUIDialogContextMenu::ShowAndGetChoice(choices);
 
   // unhighlight the item
@@ -149,8 +145,6 @@ void CGUIDialogFavourites::OnPopupMenu(int item)
     OnRename(item);
   else if (button == 5)
     OnSetThumb(item);
-  else if (button >= CONTEXT_BUTTON_FIRST_ADDON)
-    CContextMenuManager::Get().Execute(button, itemPtr);
 }
 
 void CGUIDialogFavourites::OnMoveItem(int item, int amount)

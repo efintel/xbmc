@@ -20,7 +20,6 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdarg.h>
 #include <math.h>
 #ifndef TARGET_POSIX
 #include <io.h>
@@ -1241,18 +1240,6 @@ extern "C"
     }
 
     return file;
-  }
-
-  int dll_fopen_s(FILE** pFile, const char * filename, const char * mode)
-  {
-    if (pFile == NULL || filename == NULL || mode == NULL)
-      return EINVAL;
-
-    *pFile = dll_fopen(filename, mode);
-    if (*pFile == NULL)
-      return errno;
-
-    return 0;
   }
 
   int dll_putc(int c, FILE *stream)

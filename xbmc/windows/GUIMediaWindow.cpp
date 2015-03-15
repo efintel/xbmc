@@ -53,7 +53,7 @@
 #include "video/VideoLibraryQueue.h"
 #include "utils/StringUtils.h"
 #include "utils/URIUtils.h"
-#include "input/Key.h"
+#include "guilib/Key.h"
 #include "guilib/LocalizeStrings.h"
 #include "utils/TimeUtils.h"
 #include "filesystem/File.h"
@@ -72,10 +72,6 @@
 #endif
 #include "FileItemListModification.h"
 #include "video/VideoInfoTag.h"
-<<<<<<< HEAD
-=======
-#include "ContextMenuManager.h"
->>>>>>> upstream/master
 
 #define CONTROL_BTNVIEWASICONS       2
 #define CONTROL_BTNSORTBY            3
@@ -240,9 +236,9 @@ bool CGUIMediaWindow::OnMessage(CGUIMessage& message)
       m_iSelectedItem = m_viewControl.GetSelectedItem();
       m_iLastControl = GetFocusedControlID();
       CGUIWindow::OnMessage(message);
-
-      // Close all open dialogs
-      g_windowManager.CloseDialogs(true);
+      CGUIDialogContextMenu* pDlg = (CGUIDialogContextMenu*)g_windowManager.GetWindow(WINDOW_DIALOG_CONTEXT_MENU);
+      if (pDlg && pDlg->IsActive())
+        pDlg->Close();
 
       // get rid of any active filtering
       if (m_canFilterAdvanced)
@@ -966,7 +962,7 @@ bool CGUIMediaWindow::OnClick(int iItem)
     if (CAddonMgr::Get().GetAddon(url.GetHostName(), addon, ADDON_SCRIPT))
     {
       if (!CScriptInvocationManager::Get().Stop(addon->LibPath()))
-        CScriptInvocationManager::Get().ExecuteAsync(addon->LibPath(), addon);
+        CScriptInvocationManager::Get().Execute(addon->LibPath(), addon);
       return true;
     }
   }
@@ -1652,8 +1648,6 @@ bool CGUIMediaWindow::OnContextButton(int itemNumber, CONTEXT_BUTTON button)
   default:
     break;
   }
-  if (button >= CONTEXT_BUTTON_FIRST_ADDON)
-    return CContextMenuManager::Get().Execute(button, m_vecItems->Get(itemNumber));
   return false;
 }
 

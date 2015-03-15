@@ -96,7 +96,7 @@ extern "C" JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved)
     JNINativeMethod mOnNewIntent = {
       "_onNewIntent",
       "(Landroid/content/Intent;)V",
-      (void*)&CJNIApplicationMainActivity::_onNewIntent
+      (void*)&CJNIContext::_onNewIntent
     };
     env->RegisterNatives(cMain, &mOnNewIntent, 1);
   }

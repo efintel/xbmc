@@ -147,13 +147,6 @@ namespace PVR
     bool GetClientName(int iClientId, std::string &strName) const;
 
     /*!
-     * Get the add-on ID of the client
-     * @param iClientId The db id of the client
-     * @return The add-on id
-     */
-    std::string GetClientAddonId(int iClientId) const;
-
-    /*!
      * @bried Get all connected clients.
      * @param clients Store the active clients in this map.
      * @return The amount of added clients.
@@ -258,31 +251,32 @@ namespace PVR
 
     /*!
      * @brief Open a stream on the given channel.
-     * @param channel The channel to start playing.
+     * @param tag The channel to start playing.
      * @param bIsSwitchingChannel True when switching channels, false otherwise.
      * @return True if the stream was opened successfully, false otherwise.
      */
-    bool OpenStream(const CPVRChannelPtr &channel, bool bIsSwitchingChannel);
+    bool OpenStream(const CPVRChannel &tag, bool bIsSwitchingChannel);
 
     /*!
      * @brief Get the URL for the stream to the given channel.
-     * @param channel The channel to get the stream url for.
+     * @param tag The channel to get the stream url for.
      * @return The requested stream url or an empty string if it wasn't found.
      */
-    std::string GetStreamURL(const CPVRChannelPtr &channel);
+    std::string GetStreamURL(const CPVRChannel &tag);
 
     /*!
      * @brief Switch an opened live tv stream to another channel.
      * @param channel The channel to switch to.
      * @return True if the switch was successfull, false otherwise.
      */
-    bool SwitchChannel(const CPVRChannelPtr &channel);
+    bool SwitchChannel(const CPVRChannel &channel);
 
     /*!
      * @brief Get the channel that is currently playing.
-     * @return the channel that is currently playing, NULL otherwise.
+     * @param channel A copy of the channel that is currently playing.
+     * @return True if a channel is playing, false otherwise.
      */
-    CPVRChannelPtr GetPlayingChannel() const;
+    bool GetPlayingChannel(CPVRChannelPtr &channel) const;
 
     /*!
      * @return True if a recording is playing, false otherwise.
@@ -477,7 +471,7 @@ namespace PVR
      * @param error An error if it occured.
      * @return True if the EPG was transfered successfully, false otherwise.
      */
-    PVR_ERROR GetEPGForChannel(const CPVRChannelPtr &channel, EPG::CEpg *epg, time_t start, time_t end);
+    PVR_ERROR GetEPGForChannel(const CPVRChannel &channel, EPG::CEpg *epg, time_t start, time_t end);
 
     //@}
 
@@ -569,44 +563,28 @@ namespace PVR
      * @param channel The channel to edit.
      * @return True if the edit was successfull, false otherwise.
      */
-<<<<<<< HEAD
     bool OpenDialogChannelAdd(const CPVRChannel &channel);
-=======
-    bool OpenDialogChannelAdd(const CPVRChannelPtr &channel);
->>>>>>> upstream/master
 
     /*!
      * @brief Open addon settings dialog to related channel
      * @param channel The channel to edit.
      * @return True if the edit was successfull, false otherwise.
      */
-<<<<<<< HEAD
     bool OpenDialogChannelSettings(const CPVRChannel &channel);
-=======
-    bool OpenDialogChannelSettings(const CPVRChannelPtr &channel);
->>>>>>> upstream/master
 
     /*!
      * @brief Inform addon to delete channel
      * @param channel The channel to delete.
      * @return True if it was successfull, false otherwise.
      */
-<<<<<<< HEAD
     bool DeleteChannel(const CPVRChannel &channel);
-=======
-    bool DeleteChannel(const CPVRChannelPtr &channel);
->>>>>>> upstream/master
 
     /*!
      * @brief Request the client to rename given channel
      * @param channel The channel to rename
      * @return True if the edit was successfull, false otherwise.
      */
-<<<<<<< HEAD
     bool RenameChannel(const CPVRChannel &channel);
-=======
-    bool RenameChannel(const CPVRChannelPtr &channel);
->>>>>>> upstream/master
 
     //@}
 
@@ -633,14 +611,6 @@ namespace PVR
     time_t GetPlayingTime() const;
     time_t GetBufferTimeStart() const;
     time_t GetBufferTimeEnd() const;
-
-    /**
-     * Called by OnEnable() and OnDisable() to check if the manager should be restarted
-     * @return True if it should be restarted, false otherwise
-     */
-    bool RestartManagerOnAddonDisabled(void) const { return m_bRestartManagerOnAddonDisabled; }
-
-    int GetClientId(const std::string& strId) const;
 
   private:
     /*!
@@ -700,17 +670,12 @@ namespace PVR
     /*!
      * @brief Initialise and connect a client.
      * @param client The client to initialise.
+     * @param newRegistration pass in pointer to bool to return whether the client was newly registered.
      * @return The id of the client if it was created or found in the existing client map, -1 otherwise.
      */
-    int RegisterClient(ADDON::AddonPtr client);
+    int RegisterClient(ADDON::AddonPtr client, bool* newRegistration = NULL);
 
     int GetClientId(const ADDON::AddonPtr client) const;
-
-    /*!
-     * Try to automatically configure clients
-     * @return True when at least one was configured
-     */
-    bool AutoconfigureClients(void);
 
     bool                  m_bChannelScanRunning;      /*!< true when a channel scan is currently running, false otherwise */
     bool                  m_bIsSwitchingChannels;        /*!< true while switching channels */
@@ -725,7 +690,5 @@ namespace PVR
     bool                  m_bNoAddonWarningDisplayed; /*!< true when a warning was displayed that no add-ons were found, false otherwise */
     CCriticalSection      m_critSection;
     std::map<int, time_t> m_connectionAttempts;       /*!< last connection attempt per add-on */
-    bool                  m_bRestartManagerOnAddonDisabled; /*!< true to restart the manager when an add-on is enabled/disabled */
-    std::map<std::string, int> m_addonNameIds; /*!< map add-on names to IDs */
   };
 }

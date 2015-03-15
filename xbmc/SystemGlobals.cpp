@@ -56,6 +56,7 @@
 
   CGUITextureManager g_TextureManager;
   CGUILargeTextureManager g_largeTextureManager;
+  CMouseStat         g_Mouse;
 
   CGUIPassword       g_passwordManager;
   CGUIInfoManager    g_infoManager;

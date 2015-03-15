@@ -63,14 +63,11 @@ namespace PVR
     /*! @brief Create a new channel */
     CPVRChannel(bool bRadio = false);
     CPVRChannel(const PVR_CHANNEL &channel, unsigned int iClientId);
+    CPVRChannel(const CPVRChannel &channel);
 
-  private:
-    CPVRChannel(const CPVRChannel &tag); // intentionally not implemented.
-    CPVRChannel &operator=(const CPVRChannel &channel); // intentionally not implemented.
-
-  public:
     bool operator ==(const CPVRChannel &right) const;
     bool operator !=(const CPVRChannel &right) const;
+    CPVRChannel &operator=(const CPVRChannel &channel);
 
     virtual void Serialize(CVariant& value) const;
 
@@ -89,7 +86,7 @@ namespace PVR
      * @param channel The new channel data.
      * @return True if something changed, false otherwise.
      */
-    bool UpdateFromClient(const CPVRChannelPtr &channel);
+    bool UpdateFromClient(const CPVRChannel &channel);
 
     /*!
      * @brief Persists the changes in the database.
@@ -180,16 +177,6 @@ namespace PVR
     bool IsRecording(void) const;
 
     /*!
-     * @return If recording, gets the recording if the add-on provides the epg id in recordings
-     */
-    CPVRRecordingPtr GetRecording(void) const;
-
-    /*!
-     * @return True if this channel has a corresponding recording, false otherwise
-     */
-    bool HasRecording(void) const;
-
-    /*!
      * @return The path to the icon for this channel.
      */
     std::string IconPath(void) const;
@@ -266,6 +253,13 @@ namespace PVR
     int UniqueID(void) const;
 
     /*!
+     * @brief Change the unique identifier for this channel.
+     * @param iUniqueId The new unique ID.
+     * @return True if the something changed, false otherwise.
+     */
+    bool SetUniqueID(int iUniqueId);
+
+    /*!
      * @return The identifier of the client that serves this channel.
      */
     int ClientID(void) const;
@@ -334,15 +328,11 @@ namespace PVR
     virtual void ToSortable(SortItem& sortable, Field field) const;
 
     /*!
-     * @brief Update the path this channel got added to the internal group
+     * @brief Update the path after the channel number in the internal group changed.
      * @param group The internal group that contains this channel
+     * @param iNewChannelGroupPosition The new channel number in the group
      */
-    void UpdatePath(CPVRChannelGroupInternal* group);
-
-    /*!
-     * @return Storage id for this channel in CPVRChannelGroup
-     */
-    std::pair<int, int> StorageId(void) const { return std::make_pair(m_iClientId, m_iUniqueId); }
+    void UpdatePath(CPVRChannelGroupInternal* group, unsigned int iNewChannelGroupPosition);
 
     /*!
      * @brief Return true if this channel is encrypted.

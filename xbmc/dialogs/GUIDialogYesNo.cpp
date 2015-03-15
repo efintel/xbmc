@@ -20,7 +20,7 @@
 
 #include "GUIDialogYesNo.h"
 #include "guilib/GUIWindowManager.h"
-#include "input/Key.h"
+#include "guilib/Key.h"
 
 #define CONTROL_NO_BUTTON 10
 #define CONTROL_YES_BUTTON 11
@@ -29,7 +29,6 @@ CGUIDialogYesNo::CGUIDialogYesNo(int overrideId /* = -1 */)
     : CGUIDialogBoxBase(overrideId == -1 ? WINDOW_DIALOG_YES_NO : overrideId, "DialogYesNo.xml")
 {
   m_bConfirmed = false;
-  m_bCanceled = false;
 }
 
 CGUIDialogYesNo::~CGUIDialogYesNo()

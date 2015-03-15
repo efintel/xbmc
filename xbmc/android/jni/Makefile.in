@@ -50,7 +50,6 @@ SRCS      += View.cpp
 SRCS      += Window.cpp
 SRCS      += Build.cpp
 SRCS      += KeyCharacterMap.cpp
-SRCS      += Activity.cpp
 
 LIB        = jni.a
 

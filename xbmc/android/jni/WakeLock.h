@@ -29,8 +29,6 @@ public:
 
   void acquire();
   void release();
-  bool isHeld();
-  void setReferenceCounted(bool val);
 
 protected:
   CJNIWakeLock();
