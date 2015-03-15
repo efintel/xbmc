@@ -20,11 +20,12 @@
 
 #include "GUIWindowPVRRecordings.h"
 
+#include "ContextMenuManager.h"
 #include "guilib/GUIKeyboardFactory.h"
 #include "dialogs/GUIDialogYesNo.h"
 #include "guilib/GUIRadioButtonControl.h"
 #include "guilib/GUIWindowManager.h"
-#include "guilib/Key.h"
+#include "input/Key.h"
 #include "guilib/LocalizeStrings.h"
 #include "GUIInfoManager.h"
 #include "pvr/PVRManager.h"
@@ -121,6 +122,7 @@ void CGUIWindowPVRRecordings::GetContextButtons(int itemNumber, CContextButtons 
 
     buttons.Add(CONTEXT_BUTTON_INFO, 19053);      /* Get Information of this recording */
     if (!isDeletedRecording)
+<<<<<<< HEAD
     {
       buttons.Add(CONTEXT_BUTTON_FIND, 19003);      /* Find similar program */
       buttons.Add(CONTEXT_BUTTON_PLAY_ITEM, 12021); /* Play this recording */
@@ -132,6 +134,19 @@ void CGUIWindowPVRRecordings::GetContextButtons(int itemNumber, CContextButtons 
     }
     else
     {
+=======
+    {
+      buttons.Add(CONTEXT_BUTTON_FIND, 19003);      /* Find similar program */
+      buttons.Add(CONTEXT_BUTTON_PLAY_ITEM, 12021); /* Play this recording */
+      std::string resumeString = GetResumeString(*pItem);
+      if (!resumeString.empty())
+      {
+        buttons.Add(CONTEXT_BUTTON_RESUME_ITEM, resumeString);
+      }
+    }
+    else
+    {
+>>>>>>> upstream/master
       buttons.Add(CONTEXT_BUTTON_UNDELETE, 19290);    /* Undelete this recording */
       buttons.Add(CONTEXT_BUTTON_DELETE, 19291);      /* Delete this permanently */
       if (m_vecItems->GetObjectCount() > 1)
@@ -152,10 +167,17 @@ void CGUIWindowPVRRecordings::GetContextButtons(int itemNumber, CContextButtons 
         buttons.Add(CONTEXT_BUTTON_MARK_UNWATCHED, 16104); /* Mark as UnWatched */
       else
         buttons.Add(CONTEXT_BUTTON_MARK_WATCHED, 16103);   /* Mark as Watched */
+<<<<<<< HEAD
 
       buttons.Add(CONTEXT_BUTTON_RENAME, 118);      /* Rename this recording */
     }
 
+=======
+
+      buttons.Add(CONTEXT_BUTTON_RENAME, 118);      /* Rename this recording */
+    }
+
+>>>>>>> upstream/master
     buttons.Add(CONTEXT_BUTTON_DELETE, 117);
   }
 
@@ -169,6 +191,11 @@ void CGUIWindowPVRRecordings::GetContextButtons(int itemNumber, CContextButtons 
 
   if (!isDeletedRecording)
     CGUIWindowPVRBase::GetContextButtons(itemNumber, buttons);
+<<<<<<< HEAD
+=======
+
+  CContextMenuManager::Get().AddVisibleItems(pItem, buttons);
+>>>>>>> upstream/master
 }
 
 bool CGUIWindowPVRRecordings::OnAction(const CAction &action)
@@ -248,18 +275,7 @@ bool CGUIWindowPVRRecordings::OnMessage(CGUIMessage &message)
             case ACTION_MOUSE_LEFT_CLICK:
             case ACTION_PLAY:
             {
-              CFileItemPtr pItem = m_vecItems->Get(iItem);
-              std::string resumeString = GetResumeString(*pItem);
-              if (!resumeString.empty())
-              {
-                CContextButtons choices;
-                choices.Add(CONTEXT_BUTTON_RESUME_ITEM, resumeString);
-                choices.Add(CONTEXT_BUTTON_PLAY_ITEM, 12021);
-                int choice = CGUIDialogContextMenu::ShowAndGetChoice(choices);
-                if (choice > 0)
-                  OnContextButtonPlay(pItem.get(), (CONTEXT_BUTTON)choice);
-                bReturn = true;
-              }
+              bReturn = PlayFile(m_vecItems->Get(iItem).get());
               break;
             }
             case ACTION_CONTEXT_MENU:

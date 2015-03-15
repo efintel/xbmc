@@ -118,6 +118,14 @@ protected:
   // implementation of IJobCallback
   virtual void OnJobComplete(unsigned int jobID, bool success, CJob *job);
 
+<<<<<<< HEAD
+=======
+  /*!
+   \brief Notifies all to refresh the current listings.
+   */
+  void Refresh();
+
+>>>>>>> upstream/master
 private:
   CVideoLibraryQueue();
   CVideoLibraryQueue(const CVideoLibraryQueue&);

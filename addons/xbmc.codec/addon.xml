@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <addon id="xbmc.codec" version="1.0.1" provider-name="Team-Kodi">
+<<<<<<< HEAD
+=======
+  <backwards-compatibility abi="1.0.1"/>
+>>>>>>> upstream/master
   <requires>
     <import addon="xbmc.core" version="0.1.0"/>
   </requires>

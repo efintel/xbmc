@@ -59,7 +59,7 @@ namespace PVR
      * @brief Get the minimal database version that is required to operate correctly.
      * @return The minimal database version.
      */
-    virtual int GetSchemaVersion() const { return 27; };
+    virtual int GetSchemaVersion() const { return 28; };
 
     /*!
      * @brief Get the default sqlite database filename.
@@ -153,6 +153,7 @@ namespace PVR
 
     /*! @name Client methods */
     //@{
+<<<<<<< HEAD
     /*!
      * @brief Remove all client information from the database.
      * @return True if all clients were removed successfully.
@@ -179,6 +180,8 @@ namespace PVR
      * @return The database ID of the client or -1 if it wasn't found.
      */
     int GetClientId(const std::string &strClientUid);
+=======
+>>>>>>> upstream/master
 
     /*!
     * @brief Updates the last watched timestamp for the channel
@@ -215,7 +218,7 @@ namespace PVR
     void UpdateTables(int version);
     virtual int GetMinSchemaVersion() const { return 11; }
 
-    bool PersistGroupMembers(CPVRChannelGroup &group);
+    bool PersistGroupMembers(const CPVRChannelGroup &group);
 
     bool PersistChannels(CPVRChannelGroup &group);
 

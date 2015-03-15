@@ -24,18 +24,17 @@
 //#define DEBUG_KEYBOARD_GETCHAR
 
 #include "KeyboardStat.h"
-#include "KeyboardLayoutConfiguration.h"
 #include "windowing/XBMC_events.h"
 #include "utils/TimeUtils.h"
 #include "input/XBMC_keytable.h"
 #include "input/XBMC_vkeys.h"
 #include "peripherals/Peripherals.h"
 #include "peripherals/devices/PeripheralHID.h"
+#include "utils/log.h"
 
 using namespace std;
 using namespace PERIPHERALS;
 
-CKeyboardStat g_Keyboard;
 
 CKeyboardStat::CKeyboardStat()
 {

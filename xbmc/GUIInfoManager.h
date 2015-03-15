@@ -26,12 +26,12 @@
  *
  */
 
-#include "Temperature.h"
 #include "threads/CriticalSection.h"
 #include "guilib/IMsgTargetCallback.h"
 #include "inttypes.h"
 #include "XBDateTime.h"
 #include "utils/Observer.h"
+#include "utils/Temperature.h"
 #include "interfaces/info/InfoBool.h"
 #include "interfaces/info/SkinVariable.h"
 #include "cores/IPlayer.h"
@@ -285,6 +285,7 @@ namespace INFO
 #define VIDEOPLAYER_AUDIO_LANG        313
 #define VIDEOPLAYER_SUB_CHANNEL_NUMBER 314
 #define VIDEOPLAYER_CHANNEL_NUMBER_LBL 315
+#define VIDEOPLAYER_CAN_RESUME_LIVE_TV 316
 
 #define CONTAINER_CAN_FILTER         342
 #define CONTAINER_CAN_FILTERADVANCED 343
@@ -826,9 +827,6 @@ public:
   bool GetItemInt(int &value, const CGUIListItem *item, int info) const;
   std::string GetItemLabel(const CFileItem *item, int info, std::string *fallback = NULL);
   std::string GetItemImage(const CFileItem *item, int info, std::string *fallback = NULL);
-
-  // Called from tuxbox service thread to update current status
-  void UpdateFromTuxBox();
 
   /*! \brief containers call here to specify that the focus is changing
    \param id control id

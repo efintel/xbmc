@@ -52,6 +52,8 @@ namespace PVR
   class CPVRRecording;
   class CPVRTimerInfoTag;
   typedef std::shared_ptr<PVR::CPVRRecording> CPVRRecordingPtr;
+  typedef std::shared_ptr<PVR::CPVRChannel> CPVRChannelPtr;
+  typedef std::shared_ptr<PVR::CPVRTimerInfoTag> CPVRTimerInfoTagPtr;
 }
 class CPictureInfoTag;
 
@@ -107,9 +109,9 @@ public:
   CFileItem(const MUSIC_INFO::CMusicInfoTag& music);
   CFileItem(const CVideoInfoTag& movie);
   CFileItem(const EPG::CEpgInfoTagPtr& tag);
-  CFileItem(const PVR::CPVRChannel& channel);
+  CFileItem(const PVR::CPVRChannelPtr& channel);
   CFileItem(const PVR::CPVRRecordingPtr& record);
-  CFileItem(const PVR::CPVRTimerInfoTag& timer);
+  CFileItem(const PVR::CPVRTimerInfoTagPtr& timer);
   CFileItem(const CMediaSource& share);
   virtual ~CFileItem(void);
   virtual CGUIListItem *Clone() const { return new CFileItem(*this); };
@@ -196,7 +198,6 @@ public:
   bool IsOnLAN() const;
   bool IsHD() const;
   bool IsNfs() const;  
-  bool IsAfp() const;    
   bool IsRemote() const;
   bool IsSmb() const;
   bool IsURL() const;
@@ -219,11 +220,8 @@ public:
   bool IsParentFolder() const;
   bool IsFileFolder(EFileFolderType types = EFILEFOLDER_MASK_ALL) const;
   bool IsRemovable() const;
-  bool IsTuxBox() const;
-  bool IsMythTV() const;
   bool IsHDHomeRun() const;
   bool IsSlingbox() const;
-  bool IsVTP() const;
   bool IsPVR() const;
   bool IsLiveTV() const;
   bool IsRSS() const;
@@ -282,12 +280,10 @@ public:
 
   inline bool HasPVRChannelInfoTag() const
   {
-    return m_pvrChannelInfoTag != NULL;
+    return m_pvrChannelInfoTag.get() != NULL;
   }
 
-  PVR::CPVRChannel* GetPVRChannelInfoTag();
-
-  inline const PVR::CPVRChannel* GetPVRChannelInfoTag() const
+  inline const PVR::CPVRChannelPtr GetPVRChannelInfoTag() const
   {
     return m_pvrChannelInfoTag;
   }
@@ -307,9 +303,7 @@ public:
     return m_pvrTimerInfoTag != NULL;
   }
 
-  PVR::CPVRTimerInfoTag* GetPVRTimerInfoTag();
-
-  inline const PVR::CPVRTimerInfoTag* GetPVRTimerInfoTag() const
+  inline const PVR::CPVRTimerInfoTagPtr GetPVRTimerInfoTag() const
   {
     return m_pvrTimerInfoTag;
   }
@@ -494,9 +488,9 @@ private:
   MUSIC_INFO::CMusicInfoTag* m_musicInfoTag;
   CVideoInfoTag* m_videoInfoTag;
   EPG::CEpgInfoTagPtr m_epgInfoTag;
-  PVR::CPVRChannel* m_pvrChannelInfoTag;
+  PVR::CPVRChannelPtr m_pvrChannelInfoTag;
   PVR::CPVRRecordingPtr m_pvrRecordingInfoTag;
-  PVR::CPVRTimerInfoTag * m_pvrTimerInfoTag;
+  PVR::CPVRTimerInfoTagPtr m_pvrTimerInfoTag;
   CPictureInfoTag* m_pictureInfoTag;
   bool m_bIsAlbum;
 
